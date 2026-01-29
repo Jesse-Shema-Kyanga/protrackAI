@@ -1,3 +1,9 @@
+/**
+ * DEVELOPMENT SEED DATA
+ * ---------------------
+ * This file populates the database with dummy data for testing purposes.
+ * The credentials found here are NOT real and are only for local development.
+ */
 
 const mongoose = require('mongoose');
 const User = require('./models/User');
