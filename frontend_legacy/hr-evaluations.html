@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTrackAI HR Evaluations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .mtn-yellow-bg {
+            background-color: #ffcc00;
+        }
+
+        .mtn-text-yellow {
+            color: #ffcc00;
+        }
+
+        .icon-placeholder {
+            width: 24px;
+            height: 24px;
+            background-color: #000;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        #reviewModal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <header class="bg-black text-white p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center">
+            <img src="https://logonoid.com/images/mtn-logo.jpg" alt="MTN" class="w-10 h-10 object-contain mr-2">
+            <h1 class="text-2xl font-bold mtn-text-yellow drop-shadow">ProTrackAI</h1>
+            <nav class="hidden md:flex space-x-6 text-lg ml-6">
+                <a href="hr-dashboard.html" class="hover:text-yellow-500 transition">HR Dashboard</a>
+                <a href="hr-workforce-analytics.html" class="hover:text-yellow-500 transition">Workforce Analytics</a>
+                <a href="hr-evaluations.html" class="mtn-text-yellow font-semibold">Evaluations & Feedback</a>
+                <a href="profile.html" class="hover:text-yellow-500 transition">Profile</a>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="icon-placeholder bg-gray-700 rounded-full p-1"><svg xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg></div>
+            <div class="icon-placeholder bg-gray-700 rounded-full p-1 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9.071a5.956 5.956 0 00-4.04-5.626 5.4 5.4 0 00-4.082 1.096 6.062 6.062 0 00-2.523 1.838 9.75 9.75 0 00-.834 4.195zM12 21a2 2 0 01-2-2h4a2 2 0 01-2-2z" />
+                </svg>
+                <span id="alertBadge"
+                    class="absolute top-0 right-0 px-2 py-1 text-xs font-bold text-black bg-yellow-500 rounded-full">0</span>
+            </div>
+            <div class="relative group cursor-pointer">
+                <div class="flex items-center space-x-2">
+                    <div id="userInitials"
+                        class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-semibold text-sm">
+                        HR</div>
+                    <span id="userName" class="text-white hidden md:block">HR Manager</span>
+                </div>
+                <div
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block z-10">
+                    <a href="profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My
+                        Profile</a>
+                    <a href="login.html" id="logoutBtn"
+                        class="block px-4 py-2 text-sm text-red-600 hover:bg-red-100">Log Out</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-6 bg-gray-100">
+        <h2 class="text-2xl font-semibold text-black mb-6">HR Evaluations & Feedback</h2>
+
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+            <div class="flex flex-wrap gap-3">
+                <select id="cycleFilter" class="px-4 py-2 border rounded-md focus:ring-2 focus:ring-yellow-500">
+                    <option value="">All Cycles</option>
+                    <option value="self">Self Evaluation</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="annual">Annual</option>
+                </select>
+                <select id="deptFilter" class="px-4 py-2 border rounded-md focus:ring-2 focus:ring-yellow-500">
+                    <option value="">All Departments</option>
+                </select>
+                <select id="statusFilter" class="px-4 py-2 border rounded-md focus:ring-2 focus:ring-yellow-500">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending Review</option>
+                    <option value="completed">Reviewed</option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <button id="seedBtn" class="bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700">Seed Sample
+                    Evals</button>
+                <button id="reportBtn"
+                    class="mtn-yellow-bg text-black font-bold py-2 px-6 rounded hover:bg-yellow-600 shadow-md">Export
+                    Report</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-mtn-yellow">
+                <p class="text-gray-500 text-sm">Submission Rate</p>
+                <h3 id="submissionRate" class="text-3xl font-bold">0%</h3>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-black">
+                <p class="text-gray-500 text-sm">Avg. Review Time</p>
+                <h3 id="avgReviewTime" class="text-3xl font-bold">0 days</h3>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-mtn-yellow">
+                <p class="text-gray-500 text-sm">Pending Reviews</p>
+                <h3 id="pendingCount" class="text-3xl font-bold">0</h3>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <h3 class="text-xl font-semibold mb-4">Employee Evaluations</h3>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dept</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cycle</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="evalsTable" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-gray-500">Loading evaluations...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Review Modal -->
+    <div id="reviewModal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">Review Evaluation</h3>
+            <div id="evalDetails" class="mb-4 p-4 bg-gray-50 rounded"></div>
+            <form id="reviewForm">
+                <input type="hidden" id="evalIdToReview">
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">HR Comment:</label>
+                    <textarea id="hrCommentInput" rows="3" class="w-full px-4 py-2 border rounded" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">HR Rating (1-5):</label>
+                    <input type="number" id="hrRatingInput" min="1" max="5" class="w-full px-4 py-2 border rounded"
+                        required>
+                </div>
+                <div class="flex space-x-2">
+                    <button type="submit" class="mtn-yellow-bg text-black py-2 px-4 rounded">Submit Review</button>
+                    <button type="button" onclick="closeReviewModal()"
+                        class="bg-gray-300 py-2 px-4 rounded">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="bg-black text-white text-center p-4 text-sm mt-8">
+        ProTrackAI © 2025 | Powered by Intelligent Analytics
+    </footer>
+
+    <script src="src/config.js"></script>
+    <script>
+        const currentUser = Auth.getUser() || {};
+        document.getElementById('userInitials').textContent = (currentUser.name || 'HR').slice(0, 2).toUpperCase();
+        document.getElementById('userName').textContent = `${currentUser.name || 'HR Manager'} (HR)`;
+
+        async function loadEvals() {
+            const cycle = document.getElementById('cycleFilter').value;
+            const dept = document.getElementById('deptFilter').value;
+            const status = document.getElementById('statusFilter').value;
+
+            let url = `${API_BASE}/evals?hr=1`;
+            if (cycle) url += `&cycle=${cycle}`;
+            if (dept) url += `&dept=${dept}`;
+            if (status) url += `&status=${status}`;
+
+            try {
+                const res = await apiFetch(url);
+                const data = await res.json();
+
+                const tbody = document.getElementById('evalsTable');
+                tbody.innerHTML = data.evals.map(e => `
+                <tr>
+                    <td class="px-6 py-4 font-medium">${e.userName}</td>
+                    <td class="px-6 py-4">${e.dept || '-'}</td>
+                    <td class="px-6 py-4">${e.type}</td>
+                    <td class="px-6 py-4">${new Date(e.timestamp).toLocaleDateString()}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${e.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                            ${e.status === 'pending' ? 'Pending Review' : 'Reviewed'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                        <button onclick='openReviewModal(${JSON.stringify(e)})' class="text-yellow-600 hover:text-yellow-900 mr-3">Review</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="text-center py-8 text-gray-500">No evaluations found</td></tr>';
+
+                document.getElementById('submissionRate').textContent = data.submissionRate + '%';
+                document.getElementById('avgReviewTime').textContent = data.avgReviewTime + ' days';
+                document.getElementById('pendingCount').textContent = data.pendingCount;
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('evalsTable').innerHTML = '<tr><td colspan="6" class="text-center py-8 text-red-500">Error loading evaluations</td></tr>';
+            }
+        }
+
+        function openReviewModal(evalData) {
+            document.getElementById('evalIdToReview').value = evalData._id;
+            document.getElementById('evalDetails').innerHTML = `
+            <p><strong>Employee:</strong> ${evalData.userName}</p>
+            <p><strong>Type:</strong> ${evalData.type}</p>
+            <p><strong>Submitted:</strong> ${new Date(evalData.timestamp).toLocaleDateString()}</p>
+            <p class="mt-2"><strong>Assessment:</strong></p>
+            <p class="text-sm">${evalData.assessment || 'N/A'}</p>
+        `;
+            document.getElementById('reviewModal').style.display = 'block';
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').style.display = 'none';
+            document.getElementById('reviewForm').reset();
+        }
+
+        document.getElementById('reviewForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const evalId = document.getElementById('evalIdToReview').value;
+            const comment = document.getElementById('hrCommentInput').value;
+            const rating = document.getElementById('hrRatingInput').value;
+
+            try {
+                const res = await apiFetch(`${API_BASE}/evals/${evalId}/review`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        hrComment: comment,
+                        hrRating: parseInt(rating),
+                        reviewedBy: currentUser.id || 'hr-manager'
+                    })
+                });
+
+                if (res.ok) {
+                    closeReviewModal();
+                    loadEvals();
+                } else {
+                    alert('Review submission failed');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error submitting review');
+            }
+        });
+
+        document.getElementById('seedBtn').onclick = () => apiFetch(`${API_BASE}/seed-evals`, { method: 'POST' }).then(loadEvals);
+        document.getElementById('reportBtn').onclick = () => console.log('Export report - implement CSV download');
+
+        document.getElementById('cycleFilter').addEventListener('change', loadEvals);
+        document.getElementById('deptFilter').addEventListener('change', loadEvals);
+        document.getElementById('statusFilter').addEventListener('change', loadEvals);
+
+        document.getElementById('logoutBtn').onclick = e => { e.preventDefault(); Auth.logout(); };
+
+        apiFetch(`${API_BASE}/api/departments`).then(r => r.json()).then(depts => {
+            const sel = document.getElementById('deptFilter');
+            depts.forEach(d => { const o = document.createElement('option'); o.value = d.name; o.textContent = d.name; sel.appendChild(o); });
+        }).catch(err => console.error('Dept load failed:', err));
+
+        loadEvals();
+    </script>
+</body>
+
+</html>

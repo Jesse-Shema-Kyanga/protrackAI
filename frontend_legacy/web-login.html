@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTrackAI - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .mtn-yellow-bg { background-color: #ffcc00; }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-full max-w-md border-2 border-yellow-500">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-yellow-500 mb-2">ProTrackAI</h1>
+            <p class="text-gray-400">Employee Dashboard Login</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-gray-300 text-sm font-medium mb-2">Employee ID</label>
+                <input 
+                    type="text" 
+                    id="userId" 
+                    class="w-full px-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 border border-gray-600"
+                    placeholder="Enter your employee ID"
+                    required
+                >
+            </div>
+
+            <div>
+                <label class="block text-gray-300 text-sm font-medium mb-2">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    class="w-full px-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 border border-gray-600"
+                    placeholder="Enter your password"
+                    required
+                >
+            </div>
+
+            <div id="errorMessage" class="hidden bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
+            </div>
+
+            <button 
+                type="submit" 
+                id="loginBtn"
+                class="w-full mtn-yellow-bg text-black font-bold py-3 rounded-lg hover:bg-yellow-600 transition duration-200 flex items-center justify-center"
+            >
+                <span id="btnText">Login</span>
+                <svg id="spinner" class="hidden animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </button>
+
+            <p class="text-center text-gray-400 text-sm">
+                Don't have an account? <a href="signup.html" class="text-yellow-500 hover:underline">Sign up</a>
+            </p>
+        </form>
+    </div>
+
+    <script src="src/config.js"></script>
+    <script>
+        const form = document.getElementById('loginForm');
+        const userIdInput = document.getElementById('userId');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const errorMessage = document.getElementById('errorMessage');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userId = userIdInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!userId || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            // Show loading
+            loginBtn.disabled = true;
+            btnText.textContent = 'Logging in...';
+            spinner.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                // Store JWT token and user data
+                Auth.setToken(data.token);
+                Auth.setUser(data.user);
+
+                // Redirect based on role
+                const role = data.user.role;
+                if (role === 'employee') {
+                    window.location.href = 'employee-dashboard.html';
+                } else if (role === 'supervisor') {
+                    window.location.href = 'supervisor-dashboard.html';
+                } else if (role === 'hr') {
+                    window.location.href = 'hr-dashboard.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
+
+            } catch (error) {
+                console.error('Login error:', error);
+                showError(error.message);
+                passwordInput.value = '';
+                passwordInput.focus();
+            } finally {
+                loginBtn.disabled = false;
+                btnText.textContent = 'Login';
+                spinner.classList.add('hidden');
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        // Focus first input
+        userIdInput.focus();
+    </script>
+</body>
+</html>

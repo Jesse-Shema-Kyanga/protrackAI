@@ -1,0 +1,42 @@
+const { app, BrowserWindow } = require('electron');
+const axios = require('axios');  // Already in deps
+
+let mainWindow;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    webPreferences: { nodeIntegration: true, contextIsolation: false }
+  });
+  mainWindow.loadFile('index.html');  // Simple status HTML
+
+  // Auto-track every 5 mins (real: use 'active-win' lib later)
+  setInterval(trackAndLog, 5 * 60 * 1000);  // 300s
+  trackAndLog();  // Run once on start
+}
+
+async function trackAndLog() {
+  // Stub active window (real: getActiveWindowTitle() via robotjs)
+  const mockActivity = {
+    userId: 'jesse25147',
+    appName: 'VS Code',  // Real: process.title
+    windowTitle: 'ProTrackAI server.js - VS Code',
+    url: 'code.visualstudio.com',  // Real: browser API
+    duration: 5  // Real: time delta
+  };
+
+  try {
+    const response = await axios.post('http://localhost:5000/log-activity', mockActivity);
+    console.log('Tracked & logged:', response.data.activity);  // Shows classified
+    mainWindow.webContents.send('log-update', response.data.activity);  // UI update
+  } catch (err) {
+    console.error('Log failed:', err.message);
+  }
+}
+
+app.whenReady().then(createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});

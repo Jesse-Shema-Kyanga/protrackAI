@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTrackAI Supervisor Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .mtn-yellow-bg {
+            background-color: #ffcc00;
+        }
+
+        .mtn-text-black {
+            color: #000000;
+        }
+
+        .mtn-text-yellow {
+            color: #ffcc00;
+        }
+
+        .border-mtn-yellow {
+            border-color: #ffcc00;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <header class="bg-black text-white p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center">
+            <img src="https://logonoid.com/images/mtn-logo.jpg" alt="MTN" class="w-10 h-10 object-contain mr-2">
+            <h1 class="text-2xl font-bold mtn-text-yellow drop-shadow">ProTrackAI</h1>
+            <nav class="hidden md:flex space-x-6 text-lg ml-6">
+                <a href="index.html" class="mtn-text-yellow font-semibold">Dashboard</a>
+                <a href="tasks.html" class="hover:text-yellow-500 transition">Tasks</a>
+                <a href="time.html" class="hover:text-yellow-500 transition">Time & Attendance</a>
+                <a href="goals.html" class="hover:text-yellow-500 transition">Goals</a>
+                <a href="supervisor-feedback.html" class="hover:text-yellow-500 transition">Feedback</a>
+                <a href="profile.html" class="hover:text-yellow-500 transition">Profile</a>
+                <a href="activity-analytics.html" class="hover:text-yellow-500 transition">Activity Analytics</a>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="icon-placeholder bg-gray-700 rounded-full p-1"><svg xmlns="http://www.w3.org/2000/svg"
+                    fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg></div>
+            <div class="icon-placeholder bg-gray-700 rounded-full p-1 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9.071a5.956 5.956 0 00-4.04-5.626 5.4 5.4 0 00-4.082 1.096 6.062 6.062 0 00-2.523 1.838 9.75 9.75 0 00-.834 4.195zM12 21a2 2 0 01-2-2h4a2 2 0 01-2-2z" />
+                </svg>
+                <span id="alertBadge"
+                    class="absolute top-0 right-0 px-2 py-1 text-xs font-bold text-black bg-yellow-500 rounded-full">0</span>
+            </div>
+            <div class="relative group cursor-pointer">
+                <div class="flex items-center space-x-2">
+                    <div id="userInitials"
+                        class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-semibold text-sm">
+                        JD</div>
+                    <span id="userName" class="text-white hidden md:block">John Doe (Supervisor)</span>
+                </div>
+                <div
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block z-10">
+                    <a href="profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My
+                        Profile</a>
+                    <a href="login.html" id="logoutBtn"
+                        class="block px-4 py-2 text-sm text-red-600 hover:bg-red-100">Log Out</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-6 bg-gray-100">
+        <h2 class="text-2xl font-semibold text-black mb-6">Team Dashboard Overview</h2>
+
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 space-y-4 md:space-y-0">
+            <select id="periodSelect" class="px-4 py-2 border rounded-md focus:ring-2 focus:ring-yellow-500">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+            </select>
+            <button id="newTaskBtn"
+                class="mtn-yellow-bg text-black font-bold py-2 px-6 rounded hover:bg-yellow-600 shadow-md">+ Add New
+                Task</button>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-mtn-yellow kpi-card transition-all">
+                <p class="text-gray-500 text-sm">Team Productivity</p>
+                <h3 id="prodScore" class="text-3xl font-bold">0%</h3>
+                <p id="prodTrend" class="text-sm mt-1"></p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-black kpi-card transition-all">
+                <p class="text-gray-500 text-sm">Task Completion Rate</p>
+                <h3 id="taskCompletion" class="text-3xl font-bold">0%</h3>
+                <p id="taskTrend" class="text-sm mt-1"></p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-mtn-yellow kpi-card transition-all">
+                <p class="text-gray-500 text-sm">Total Hours Logged</p>
+                <h3 id="totalHours" class="text-3xl font-bold">0</h3>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-black kpi-card transition-all">
+                <p class="text-gray-500 text-sm">Open Tasks</p>
+                <h3 id="openTasks" class="text-3xl font-bold">0</h3>
+                <p class="text-gray-600 text-sm">Due next 7 days</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Team Overview -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4">Team Highlights</h3>
+                <div id="highlights" class="space-y-4 text-sm"></div>
+            </div>
+
+            <!-- Recent Alerts -->
+            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                <h3 class="text-xl font-semibold mb-4">Recent Alerts</h3>
+                <ul id="alertsList" class="space-y-3 text-sm text-gray-800"></ul>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-black text-white text-center p-4 text-sm mt-8">
+        ProTrackAI © 2025 | Powered by Intelligent Analytics
+    </footer>
+
+    <script src="src/config.js"></script>
+    <script>
+        const currentUser = Auth.getUser() || {};
+        document.getElementById('userInitials').textContent = (currentUser.name || 'SV').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        document.getElementById('userName').textContent = `${currentUser.name || 'Supervisor'} (Supervisor)`;
+
+        async function loadDashboard() {
+            const period = document.getElementById('periodSelect').value;
+            try {
+                const userId = currentUser.id;
+                const team = currentUser.team;
+
+                // FIXED: Added supId and team query params
+                const res = await apiFetch(`${API_BASE}/api/supervisor-dashboard?supId=${userId}&team=${team}&period=${period}`);
+                const data = await res.json();
+
+                document.getElementById('prodScore').textContent = `${data.productivity}%`;
+                document.getElementById('prodTrend').textContent = data.productivityTrend > 0 ? `+${data.productivityTrend}%` : `${data.productivityTrend}%`;
+                document.getElementById('prodTrend').className = data.productivityTrend >= 0 ? 'text-green-600' : 'text-red-600';
+
+                document.getElementById('taskCompletion').textContent = `${data.taskCompletion}%`;
+                document.getElementById('taskTrend').textContent = data.taskTrend >= 0 ? `+${data.taskTrend}%` : `${data.taskTrend}%`;
+                document.getElementById('taskTrend').className = data.taskTrend >= 0 ? 'text-green-600' : 'text-red-600';
+
+                document.getElementById('totalHours').textContent = data.totalHours;
+                document.getElementById('openTasks').textContent = data.openTasks;
+
+                // Highlights
+                const highlights = document.getElementById('highlights');
+                highlights.innerHTML = `
+                    <div><strong>Top Performer:</strong> ${data.topPerformer?.name || 'N/A'} (${data.topPerformer?.prod || 0}%)</div>
+                    <div><strong>At Risk:</strong> ${data.atRisk?.name || 'N/A'} (${data.atRisk?.prod || 0}%)</div>
+                `;
+
+                // Alerts
+                const alertsList = document.getElementById('alertsList');
+                if (data.alerts && data.alerts.length > 0) {
+                    alertsList.innerHTML = data.alerts.map(a => `<li class="flex items-start"><span class="mtn-text-yellow mr-2">•</span>${a}</li>`).join('');
+                } else {
+                    alertsList.innerHTML = '<li class="text-gray-500">No alerts</li>';
+                }
+
+                document.getElementById('alertBadge').textContent = data.alerts?.length || 0;
+
+            } catch (err) {
+                console.error('Dashboard error:', err);
+                document.getElementById('highlights').innerHTML = '<p class="text-red-500">Error loading dashboard</p>';
+            }
+        }
+
+        document.getElementById('periodSelect').addEventListener('change', loadDashboard);
+        document.getElementById('newTaskBtn').addEventListener('click', () => window.location.href = 'tasks.html');
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            Auth.logout();
+        });
+
+        loadDashboard();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+{
+  "name": "protrackai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "cd backend && nodemon server.js",
+    "agent": "cd backend/agent && electron main.js",
+    "frontend": "cd frontend && live-server . --port=3000",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jesse-Shema-Kyanga/protrackAI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Jesse-Shema-Kyanga/protrackAI/issues"
+  },
+  "homepage": "https://github.com/Jesse-Shema-Kyanga/protrackAI#readme",
+  "dependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "axios": "^1.13.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-validator": "^7.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.19.2",
+    "pdfkit": "^0.17.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "live-server": "^1.2.2"
+  }
+}

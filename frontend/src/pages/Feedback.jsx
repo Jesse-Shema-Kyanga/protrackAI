@@ -1,0 +1,294 @@
+import { useState, useEffect, useContext } from 'react';
+import {
+    Box, Paper, Typography, Tabs, Tab, Grid, TextField, Button, Card, CardContent,
+    Select, MenuItem, FormControl, InputLabel, List, ListItem, ListItemText
+} from '@mui/material';
+import axios from 'axios';
+import AuthContext from '../context/AuthContext';
+
+const Feedback = () => {
+    const { user } = useContext(AuthContext);
+    const [tab, setTab] = useState(0);
+    const [employees, setEmployees] = useState([]);
+    const [feedbackList, setFeedbackList] = useState([]);
+    const [formData, setFormData] = useState({
+        toUserId: '', type: '', content: '', rating: '', assessment: '', areasImprovement: '',
+        hrComment: '', hrRating: 5
+    });
+    const [reviewingId, setReviewingId] = useState(null);
+
+    const isSupervisor = user.role === 'supervisor' || user.role === 'hr';
+
+    useEffect(() => {
+        if (user) {
+            if (isSupervisor) {
+                fetchEmployees();
+                if (tab === 1) fetchSelfEvals();
+            } else {
+                if (tab === 0) fetchReceivedFeedback();
+                if (tab === 1) fetchMySelfEvals();
+            }
+        }
+    }, [user, tab]);
+
+    const fetchEmployees = async () => {
+        try {
+            const res = await axios.get(`/api/users?role=employee`);
+            setEmployees(res.data);
+        } catch (err) { console.error(err); }
+    };
+
+    const fetchReceivedFeedback = async () => {
+        try {
+            const res = await axios.get(`/api/feedback/${user.id}`);
+            setFeedbackList(res.data);
+        } catch (err) { console.error(err); }
+    };
+
+    const fetchSelfEvals = async () => { // For Supervisor/HR identifying employees
+        try {
+            const params = user.role === 'hr'
+                ? { hr: true }
+                : { team: user.team, supId: user.id };
+            const res = await axios.get('/api/evals', { params });
+            setFeedbackList(res.data.evals || res.data || []);
+        } catch (err) { console.error(err); }
+    };
+
+    const fetchMySelfEvals = async () => { // For Employee history
+        try {
+            const res = await axios.get(`/api/evals/${user.id}`);
+            setFeedbackList(res.data);
+        } catch (err) { console.error(err); }
+    };
+
+    const handleSubmitFeedback = async () => { // Supervisor sending
+        try {
+            await axios.post('/api/feedback', {
+                fromUserId: user.id,
+                toUserId: formData.toUserId,
+                type: formData.type,
+                content: formData.content,
+                rating: formData.rating
+            });
+            alert('Feedback sent!');
+            setFormData({ ...formData, content: '', rating: '', type: '', toUserId: '' });
+        } catch (err) { alert('Error sending feedback'); }
+    };
+
+    const handleSubmitSelfEval = async () => { // Employee submitting
+        try {
+            await axios.post('/api/evals', {
+                userId: user.id,
+                assessment: formData.assessment,
+                areasImprovement: formData.areasImprovement,
+                rating: formData.rating,
+                type: 'self',
+                status: 'pending'
+            });
+            alert('Self-evaluation submitted!');
+            fetchMySelfEvals();
+            setFormData({ ...formData, assessment: '', areasImprovement: '', rating: '' });
+        } catch (err) { alert('Error submitting evaluation'); }
+    };
+
+    const handleReviewSubmit = async (evalId) => {
+        try {
+            await axios.put(`/api/evals/${evalId}/review`, {
+                hrComment: formData.hrComment,
+                hrRating: formData.hrRating,
+                reviewedBy: user.id
+            });
+            alert('Review recorded!');
+            setReviewingId(null);
+            setFormData({ ...formData, hrComment: '', hrRating: 5 });
+            fetchSelfEvals();
+        } catch (err) { alert('Error submitting review'); }
+    };
+
+    return (
+        <Box>
+            <Typography variant="h4" gutterBottom>
+                {isSupervisor ? 'Team Feedback & Evaluations' : 'My Feedback & Self-Eval'}
+            </Typography>
+
+            <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 3 }}>
+                <Tab label={isSupervisor ? "Give Feedback" : "Received Feedback"} />
+                <Tab label={isSupervisor ? "Review Self-Evals" : "Submit Self-Eval"} />
+            </Tabs>
+
+            {/* SUPERVISOR VIEW */}
+            {isSupervisor && tab === 0 && (
+                <Paper sx={{ p: 4, maxWidth: 600 }}>
+                    <Typography variant="h6" mb={2}>Give Feedback to Employee</Typography>
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel>Employee</InputLabel>
+                        <Select
+                            value={formData.toUserId}
+                            label="Employee"
+                            onChange={(e) => setFormData({ ...formData, toUserId: e.target.value })}
+                        >
+                            {employees.map(e => <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>)}
+                        </Select>
+                    </FormControl>
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel>Type</InputLabel>
+                        <Select
+                            value={formData.type}
+                            label="Type"
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                        >
+                            <MenuItem value="positive">Positive Recognition</MenuItem>
+                            <MenuItem value="constructive">Constructive</MenuItem>
+                            <MenuItem value="performance_review">Performance Review</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <TextField
+                        label="Message" multiline rows={4} fullWidth margin="normal"
+                        value={formData.content}
+                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    />
+                    <TextField
+                        label="Rating (1-10)" type="number" fullWidth margin="normal"
+                        value={formData.rating}
+                        onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                    />
+                    <Button variant="contained" sx={{ mt: 2 }} onClick={handleSubmitFeedback}>Submit Feedback</Button>
+                </Paper>
+            )}
+
+            {isSupervisor && tab === 1 && (
+                <Grid container spacing={2}>
+                    {feedbackList.map((evalItem, i) => (
+                        <Grid size={{ xs: 12 }} key={i}>
+                            <Card variant="outlined" sx={{ borderLeft: evalItem.status === 'pending' ? '6px solid #ffcc00' : '6px solid #4caf50' }}>
+                                <CardContent>
+                                    <Box display="flex" justifyContent="space-between">
+                                        <Typography variant="h6">{evalItem.userName || evalItem.userId} - {evalItem.type}</Typography>
+                                        <Typography variant="overline" color={evalItem.status === 'pending' ? 'error' : 'success'}>
+                                            {evalItem.status}
+                                        </Typography>
+                                    </Box>
+                                    <Typography color="textSecondary" gutterBottom>{new Date(evalItem.timestamp).toLocaleDateString()}</Typography>
+                                    <Typography variant="body1" mt={1}><strong>Assessment:</strong> {evalItem.assessment}</Typography>
+                                    <Typography variant="body1"><strong>Improvements:</strong> {evalItem.areasImprovement}</Typography>
+                                    <Typography variant="body2" mt={1} color="primary">Employee Rating: {evalItem.rating}</Typography>
+
+                                    {evalItem.status === 'pending' && reviewingId !== evalItem._id && (
+                                        <Button
+                                            variant="contained"
+                                            size="small"
+                                            sx={{ mt: 2 }}
+                                            onClick={() => setReviewingId(evalItem._id)}
+                                        >
+                                            Record Audit Review
+                                        </Button>
+                                    )}
+
+                                    {reviewingId === evalItem._id && (
+                                        <Box mt={3} p={2} bgcolor="grey.50" borderRadius={1}>
+                                            <Typography variant="subtitle2" gutterBottom>Audit Decision</Typography>
+                                            <TextField
+                                                label="HR/Supervisor Comment"
+                                                fullWidth multiline rows={2} margin="dense"
+                                                value={formData.hrComment}
+                                                onChange={(e) => setFormData({ ...formData, hrComment: e.target.value })}
+                                            />
+                                            <TextField
+                                                label="Final Quality Rating (1-10)"
+                                                type="number" size="small" margin="dense"
+                                                value={formData.hrRating}
+                                                onChange={(e) => setFormData({ ...formData, hrRating: e.target.value })}
+                                            />
+                                            <Box mt={1}>
+                                                <Button size="small" onClick={() => handleReviewSubmit(evalItem._id)}>Confirm Review</Button>
+                                                <Button size="small" color="inherit" onClick={() => setReviewingId(null)}>Cancel</Button>
+                                            </Box>
+                                        </Box>
+                                    )}
+
+                                    {evalItem.status === 'completed' && (
+                                        <Box mt={2} p={2} bgcolor="success.light" sx={{ opacity: 0.9, borderRadius: 1 }}>
+                                            <Typography variant="subtitle2"><strong>Audit Result:</strong> {evalItem.hrComment}</Typography>
+                                            <Typography variant="caption">Rating: {evalItem.hrRating}/10 | Reviewed At: {new Date(evalItem.timestamp).toLocaleDateString()}</Typography>
+                                        </Box>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    ))}
+                    {feedbackList.length === 0 && <Typography p={2}>No evaluations found.</Typography>}
+                </Grid>
+            )}
+
+            {/* EMPLOYEE VIEW */}
+            {!isSupervisor && tab === 0 && (
+                <List sx={{ bgcolor: 'background.paper' }}>
+                    {feedbackList.map((fb, i) => (
+                        <ListItem key={i} divider alignItems="flex-start">
+                            <ListItemText
+                                primary={
+                                    <>
+                                        {fb.type.toUpperCase()}
+                                        <Typography component="span" variant="caption" ml={2}>{new Date(fb.timestamp).toLocaleDateString()}</Typography>
+                                    </>
+                                }
+                                secondary={
+                                    <>
+                                        <Typography component="span" variant="body2" color="textPrimary" display="block">
+                                            {fb.content}
+                                        </Typography>
+                                        From: {fb.fromUserName || 'Supervisor'} | Rating: {fb.rating}
+                                    </>
+                                }
+                            />
+                        </ListItem>
+                    ))}
+                    {feedbackList.length === 0 && <Typography p={2}>No feedback received yet.</Typography>}
+                </List>
+            )}
+
+            {!isSupervisor && tab === 1 && (
+                <Grid container spacing={3}>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Paper sx={{ p: 4 }}>
+                            <Typography variant="h6" mb={2}>Submit Self-Evaluation</Typography>
+                            <TextField
+                                label="Progress Assessment" multiline rows={4} fullWidth margin="normal"
+                                value={formData.assessment}
+                                onChange={(e) => setFormData({ ...formData, assessment: e.target.value })}
+                            />
+                            <TextField
+                                label="Areas for Improvement" multiline rows={3} fullWidth margin="normal"
+                                value={formData.areasImprovement}
+                                onChange={(e) => setFormData({ ...formData, areasImprovement: e.target.value })}
+                            />
+                            <TextField
+                                label="Self Rating (1-10)" type="number" fullWidth margin="normal"
+                                value={formData.rating}
+                                onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                            />
+                            <Button variant="contained" sx={{ mt: 2 }} onClick={handleSubmitSelfEval}>Submit Evaluation</Button>
+                        </Paper>
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Typography variant="h6" mb={2}>Past Evaluations</Typography>
+                        <List sx={{ bgcolor: 'background.paper' }}>
+                            {feedbackList.map((ev, i) => (
+                                <ListItem key={i} divider>
+                                    <ListItemText
+                                        primary={`Self Eval - ${new Date(ev.timestamp).toLocaleDateString()}`}
+                                        secondary={`Rating: ${ev.rating} | Status: ${ev.status}`}
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Grid>
+                </Grid>
+            )}
+
+        </Box>
+    );
+};
+
+export default Feedback;

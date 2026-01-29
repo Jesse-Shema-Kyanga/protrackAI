@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTrackAI HR Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .mtn-yellow-bg {
+            background-color: #ffcc00;
+        }
+
+        .mtn-text-black {
+            color: #000000;
+        }
+
+        .mtn-text-yellow {
+            color: #ffcc00;
+        }
+
+        .border-mtn-yellow {
+            border-color: #ffcc00;
+        }
+
+        .icon-placeholder {
+            width: 24px;
+            height: 24px;
+            background-color: #000;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        #loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #ffcc00;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ffcc00;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <header class="bg-black text-white p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center">
+            <img src="https://logonoid.com/images/mtn-logo.jpg" alt="MTN Group Logo"
+                class="w-10 h-10 object-contain mr-2">
+            <h1 class="text-2xl font-bold mtn-text-yellow drop-shadow">ProTrackAI</h1>
+            <nav class="hidden md:flex space-x-6 text-lg ml-6" id="main-nav">
+                <a href="hr-dashboard.html"
+                    class="mtn-text-yellow hover:text-white transition duration-200 font-semibold">HR Dashboard</a>
+                <a href="hr-workforce-analytics.html" class="hover:text-yellow-500 transition duration-200">Workforce
+                    Analytics</a>
+                <a href="hr-evaluations.html" class="hover:text-yellow-500 transition duration-200">Evaluations &
+                    Feedback</a>
+                <a href="profile.html" class="hover:text-yellow-500 transition duration-200">Profile</a>
+            </nav>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <div class="icon-placeholder bg-gray-700 hover:bg-gray-600 cursor-pointer rounded-full p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+            </div>
+            <div class="icon-placeholder bg-gray-700 hover:bg-gray-600 cursor-pointer rounded-full p-1 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9.071a5.956 5.956 0 00-4.04-5.626a5.4 5.4 0 00-4.082 1.096a6.062 6.062 0 00-2.523 1.838a9.75 9.75 0 00-.834 4.195zM12 21a2 2 0 01-2-2h4a2 2 0 01-2 2z" />
+                </svg>
+                <span id="alert-badge"
+                    class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-black transform translate-x-1/2 -translate-y-1/2 bg-yellow-500 rounded-full">0</span>
+            </div>
+
+            <div class="relative group cursor-pointer">
+                <div class="flex items-center space-x-2">
+                    <div
+                        class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-semibold text-sm">
+                        HR</div>
+                    <span class="text-white hidden md:block" id="user-role-display">Sarah Green (HR Manager)</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="w-4 h-4 text-white hidden md:block">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </div>
+                <div
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block z-10">
+                    <a href="profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My
+                        Profile</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                    <a href="login.html" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                        id="logoutBtn">Log Out</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-6 bg-gray-100">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold text-black">HR Dashboard: Workforce Insights</h2>
+            <select id="periodSelect" class="px-4 py-2 border rounded-md focus:ring-2 focus:ring-yellow-500">
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="quarter">This Quarter</option>
+            </select>
+        </div>
+
+        <div id="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div
+                class="bg-white p-6 rounded-lg shadow-md border-b-4 border-mtn-yellow kpi-card transition-all duration-200">
+                <p class="text-gray-500 text-sm">Total Employees</p>
+                <h3 id="total-employees" class="text-3xl font-bold mtn-text-black mt-2">0</h3>
+                <p id="employees-trend" class="text-sm mt-1 text-gray-600">Active workforce</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-black kpi-card transition-all duration-200">
+                <p class="text-gray-500 text-sm">Avg. Company Productivity</p>
+                <h3 id="avg-productivity" class="text-3xl font-bold mtn-text-black mt-2">0%</h3>
+                <p id="productivity-trend" class="text-sm mt-1"></p>
+            </div>
+            <div
+                class="bg-white p-6 rounded-lg shadow-md border-b-4 border-mtn-yellow kpi-card transition-all duration-200">
+                <p class="text-gray-500 text-sm">Pending Evaluations</p>
+                <h3 id="pending-evals" class="text-3xl font-bold mtn-text-black mt-2">0</h3>
+                <p id="evals-trend" class="text-sm mt-1 text-red-600">Requires attention</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-black kpi-card transition-all duration-200">
+                <p class="text-gray-500 text-sm">Active Departments</p>
+                <h3 id="dept-count" class="text-3xl font-bold mtn-text-black mt-2">0</h3>
+                <p id="dept-trend" class="text-sm mt-1 text-gray-600">Tracked divisions</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="flex flex-col md:flex-row justify-start items-center mb-6 space-y-4 md:space-y-0 md:space-x-4">
+            <button onclick="window.location.href='hr-workforce-analytics.html'"
+                class="mtn-yellow-bg text-black font-semibold py-2 px-4 rounded-md hover:bg-yellow-600 transition duration-200 shadow-md">
+                View Detailed Analytics
+            </button>
+            <button onclick="window.location.href='hr-evaluations.html'"
+                class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600 transition duration-200 shadow-md">
+                Manage Evaluations
+            </button>
+            <button
+                class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600 transition duration-200 shadow-md">
+                Generate HR Report
+            </button>
+        </div>
+
+        <!-- Top Productive & Non-Productive Apps -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mtn-text-black mb-4">Top Productive Applications</h3>
+                <ul id="top-productive-list" class="space-y-2 text-sm">
+                    <li class="text-gray-500">Loading...</li>
+                </ul>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mtn-text-black mb-4">Top Non-Productive Applications</h3>
+                <ul id="top-nonproductive-list" class="space-y-2 text-sm">
+                    <li class="text-gray-500">Loading...</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- HR Alerts -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8 border-l-4 border-yellow-500">
+            <h3 class="text-xl font-semibold mtn-text-black mb-4">Recent HR Alerts & Actions</h3>
+            <ul id="alerts-list" class="space-y-3 text-sm text-gray-800">
+                <li class="text-gray-500">Loading alerts...</li>
+            </ul>
+        </div>
+
+        <!-- Departmental Overview Table -->
+        <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+            <h3 class="text-xl font-semibold mtn-text-black mb-4">Departmental Overview</h3>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Department</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Productivity %</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Non-Prod Hours</th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Logged Hours</th>
+                    </tr>
+                </thead>
+                <tbody id="dept-table-body">
+                    <tr>
+                        <td colspan="4" class="px-6 py-4 text-gray-500 text-center">Loading departments...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer class="bg-black text-white text-center p-4 text-sm mt-8">
+        ProTrackAI &copy; 2025 | Powered by Intelligent Analytics
+    </footer>
+
+    <script src="src/config.js"></script>
+    <script>
+        const currentUser = Auth.getUser() || {};
+
+        // Logout handler
+        document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            Auth.logout();
+        });
+
+        // Main load function
+        async function loadHRDashboard() {
+            const spinner = document.getElementById('loading-spinner');
+            const period = document.getElementById('periodSelect').value;
+
+            spinner.style.display = 'block';
+
+            try {
+                // Fetch HR analytics data
+                const analyticsRes = await apiFetch(`${API_BASE}/api/hr-analytics?period=${period}`);
+                if (!analyticsRes.ok) throw new Error(`Analytics API error: ${analyticsRes.status}`);
+                const analytics = await analyticsRes.json();
+
+                // Fetch evaluations data
+                const evalsRes = await apiFetch(`${API_BASE}/evals?hr=true`);
+                const evalsData = await evalsRes.json();
+
+                spinner.style.display = 'none';
+
+                // ✅ KPI 1: Total Employees (calculate from departments)
+                const totalEmployees = analytics.departments?.reduce((sum, dept) => {
+                    // Estimate employees from logged hours (rough calculation)
+                    // In real scenario, you'd have employee count in User collection
+                    return sum + Math.ceil(dept.loggedHours / 40); // Assume 40h/week per person
+                }, 0) || 0;
+                document.getElementById('total-employees').textContent = totalEmployees;
+
+                // ✅ KPI 2: Avg Company Productivity
+                document.getElementById('avg-productivity').textContent = `${analytics.prodRatio}%`;
+                const prodTrend = document.getElementById('productivity-trend');
+                if (analytics.prodRatio >= 70) {
+                    prodTrend.textContent = '✓ Healthy productivity';
+                    prodTrend.className = 'text-green-600 text-sm mt-1';
+                } else if (analytics.prodRatio >= 50) {
+                    prodTrend.textContent = '⚠ Below target';
+                    prodTrend.className = 'text-yellow-600 text-sm mt-1';
+                } else {
+                    prodTrend.textContent = '⚠ Critical - needs attention';
+                    prodTrend.className = 'text-red-600 text-sm mt-1';
+                }
+
+                // ✅ KPI 3: Pending Evaluations
+                document.getElementById('pending-evals').textContent = evalsData.pendingCount || 0;
+
+                // ✅ KPI 4: Active Departments
+                document.getElementById('dept-count').textContent = analytics.departments?.length || 0;
+
+                // ✅ Top Productive Apps
+                const topProdList = document.getElementById('top-productive-list');
+                if (analytics.topProductive && analytics.topProductive.length > 0) {
+                    topProdList.innerHTML = analytics.topProductive.map(app =>
+                        `<li class="flex justify-between">
+                    <span class="font-medium">${app.name}</span>
+                    <span class="text-gray-600">${app.hours}h (${app.percent}%)</span>
+                </li>`
+                    ).join('');
+                } else {
+                    topProdList.innerHTML = '<li class="text-gray-500">No productive activity tracked yet</li>';
+                }
+
+                // ✅ Top Non-Productive Apps
+                const topNonProdList = document.getElementById('top-nonproductive-list');
+                if (analytics.topNonProductive && analytics.topNonProductive.length > 0) {
+                    topNonProdList.innerHTML = analytics.topNonProductive.map(app =>
+                        `<li class="flex justify-between">
+                    <span class="font-medium text-red-600">${app.name}</span>
+                    <span class="text-gray-600">${app.hours}h (${app.percent}%)</span>
+                </li>`
+                    ).join('');
+                } else {
+                    topNonProdList.innerHTML = '<li class="text-gray-500">No non-productive activity tracked</li>';
+                }
+
+                // ✅ Alerts (generate from data, not hardcoded)
+                const alertsList = document.getElementById('alerts-list');
+                const alerts = [];
+
+                // Alert: Low productivity departments
+                analytics.departments?.forEach(dept => {
+                    if (dept.prod < 50) {
+                        alerts.push(`⚠ <strong>${dept.name}</strong> dept has low productivity (${dept.prod}%)`);
+                    }
+                });
+
+                // Alert: Pending evaluations
+                if (evalsData.pendingCount > 10) {
+                    alerts.push(`⚠ <strong>${evalsData.pendingCount}</strong> evaluations pending review`);
+                }
+
+                // Alert: High non-productive usage
+                analytics.topNonProductive?.slice(0, 2).forEach(app => {
+                    if (app.percent > 15) {
+                        alerts.push(`⚠ High non-productive usage: <strong>${app.name}</strong> (${app.percent}%)`);
+                    }
+                });
+
+                if (alerts.length > 0) {
+                    alertsList.innerHTML = alerts.map(alert =>
+                        `<li class="flex items-start">
+                    <span class="mtn-text-yellow mr-2">●</span>
+                    <span>${alert}</span>
+                </li>`
+                    ).join('');
+                    document.getElementById('alert-badge').textContent = alerts.length;
+                } else {
+                    alertsList.innerHTML = '<li class="text-green-600">✓ No alerts - all metrics healthy</li>';
+                    document.getElementById('alert-badge').textContent = '0';
+                }
+
+                // ✅ Departmental Table
+                const tbody = document.getElementById('dept-table-body');
+                if (analytics.departments && analytics.departments.length > 0) {
+                    tbody.innerHTML = analytics.departments.map(dept => {
+                        const prodClass = dept.prod >= 70 ? 'text-green-600' : dept.prod >= 50 ? 'text-yellow-600' : 'text-red-600';
+                        return `<tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">${dept.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${prodClass} font-semibold">${dept.prod}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${dept.nonProdHours}h</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${dept.loggedHours}h</td>
+                </tr>`;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-gray-500 text-center">No department data available. Please seed users with departments.</td></tr>';
+                }
+
+            } catch (err) {
+                spinner.style.display = 'none';
+                console.error('HR Dashboard load error:', err);
+
+                // Show error state
+                document.getElementById('total-employees').textContent = '0';
+                document.getElementById('avg-productivity').textContent = '0%';
+                document.getElementById('pending-evals').textContent = '0';
+                document.getElementById('dept-count').textContent = '0';
+
+                document.getElementById('alerts-list').innerHTML =
+                    `<li class="text-red-600">⚠ Failed to load dashboard: ${err.message}</li>`;
+
+                document.getElementById('dept-table-body').innerHTML =
+                    `<tr><td colspan="4" class="px-6 py-4 text-red-500 text-center">Error: ${err.message}</td></tr>`;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('periodSelect')?.addEventListener('change', loadHRDashboard);
+
+        // Load on page load
+        window.addEventListener('load', loadHRDashboard);
+    </script>
+</body>
+
+</html>

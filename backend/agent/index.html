@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><title>ProTrackAI Agent</title></head>
+<body style="padding: 20px; font-family: Arial;">
+  <h1>ProTrackAI Tracker Active 🚀</h1>
+  <p>Logging every 5 mins to backend...</p>
+  <ul id="logs" style="list-style: none; padding: 0;"></ul>
+  <script>
+    const { ipcRenderer } = require('electron');
+    ipcRenderer.on('log-update', (event, activity) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${activity.timestamp}</strong>: ${activity.appName} - ${activity.windowTitle} (${activity.classified})`;
+      li.style.margin = '10px 0';
+      li.style.padding = '5px';
+      li.style.background = activity.classified === 'productive' ? '#d4edda' : '#f8d7da';
+      document.getElementById('logs').appendChild(li);
+    });
+  </script>
+</body>
+</html>

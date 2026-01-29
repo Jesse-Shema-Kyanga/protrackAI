@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTrackAI Goals Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        .mtn-yellow-bg {
+            background-color: #ffcc00;
+        }
+
+        .mtn-text-black {
+            color: #000000;
+        }
+
+        .mtn-text-yellow {
+            color: #ffcc00;
+        }
+
+        .border-mtn-yellow {
+            border-color: #ffcc00;
+        }
+
+        .icon-placeholder {
+            width: 24px;
+            height: 24px;
+            background-color: #000;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #ffcc00;
+            transition: width 0.4s ease;
+        }
+
+        #goalModal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <header class="bg-black text-white p-4 flex items-center justify-between shadow-md">
+        <div class="flex items-center">
+            <img src="https://logonoid.com/images/mtn-logo.jpg" alt="MTN Group Logo"
+                class="w-10 h-10 object-contain mr-2">
+            <h1 class="text-2xl font-bold mtn-text-yellow drop-shadow">ProTrackAI</h1>
+            <nav class="hidden md:flex space-x-6 text-lg ml-6">
+                <a href="index.html" class="hover:text-yellow-500 transition duration-200">Dashboard</a>
+                <a href="tasks.html" class="hover:text-yellow-500 transition duration-200">Tasks</a>
+                <a href="time.html" class="hover:text-yellow-500 transition duration-200">Time & Attendance</a>
+                <a href="goals.html"
+                    class="mtn-text-yellow hover:text-white transition duration-200 font-semibold">Goals</a>
+                <a href="supervisor-feedback.html" class="hover:text-yellow-500 transition duration-200">Feedback</a>
+                <a href="profile.html" class="hover:text-yellow-500 transition duration-200">Profile</a>
+                <a href="activity-analytics.html" class="hover:text-yellow-500 transition duration-200">Activity
+                    Analytics</a>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="icon-placeholder bg-gray-700 hover:bg-gray-600 cursor-pointer rounded-full p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+            </div>
+            <div class="icon-placeholder bg-gray-700 hover:bg-gray-600 cursor-pointer rounded-full p-1 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9.071a5.956 5.956 0 00-4.04-5.626 5.4 5.4 0 00-4.082 1.096 6.062 6.062 0 00-2.523 1.838 9.75 9.75 0 00-.834 4.195zM12 21a2 2 0 01-2-2h4a2 2 0 01-2 2z" />
+                </svg>
+                <span
+                    class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-black transform translate-x-1/2 -translate-y-1/2 bg-yellow-500 rounded-full"
+                    id="alertBadge">0</span>
+            </div>
+            <div class="relative group cursor-pointer">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-semibold text-sm"
+                        id="userInitials">JD</div>
+                    <span class="text-white hidden md:block" id="userName">John Doe (Supervisor)</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="w-4 h-4 text-white hidden md:block">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                </div>
+                <div
+                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 hidden group-hover:block z-10">
+                    <a href="profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My
+                        Profile</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                    <a href="login.html" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                        id="logoutBtn">Log Out</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-6 bg-gray-100">
+        <h2 class="text-2xl font-semibold text-black mb-6">Goals Management</h2>
+
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+            <div class="flex space-x-4">
+                <select id="empFilter"
+                    class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                    <option value="">All Employees</option>
+                </select>
+                <select id="statusFilter"
+                    class="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                    <option value="">All Status</option>
+                    <option value="on-track">On Track</option>
+                    <option value="at-risk">At Risk</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+            <div class="flex space-x-2">
+                <button id="seedBtn"
+                    class="bg-gray-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600 transition">Seed
+                    Sample Goals</button>
+                <button id="newGoalBtn"
+                    class="mtn-yellow-bg text-black font-semibold py-2 px-6 rounded-md hover:bg-yellow-600 transition shadow-md">+
+                    New Goal</button>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8 overflow-x-auto">
+            <h3 class="text-xl font-semibold mtn-text-black mb-4">Active Goals</h3>
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Employee</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Goal
+                            Title</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Target</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due
+                            Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Progress</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="goalsTbody" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">Loading goals...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-mtn-yellow">
+                <h3 class="text-xl font-semibold mtn-text-black mb-4">Total Goals</h3>
+                <p class="text-4xl font-bold text-black" id="totalGoals">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-green-500">
+                <h3 class="text-xl font-semibold mtn-text-black mb-4">Completed</h3>
+                <p class="text-4xl font-bold text-green-600" id="completedGoals">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-b-4 border-red-500">
+                <h3 class="text-xl font-semibold mtn-text-black mb-4">At Risk</h3>
+                <p class="text-4xl font-bold text-red-600" id="atRiskGoals">0</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Goal Creation Modal -->
+    <div id="goalModal">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">Create New Goal</h3>
+            <form id="goalForm">
+                <input type="text" id="goalTitle" placeholder="Goal Title" class="w-full mb-3 px-4 py-2 border rounded"
+                    required>
+                <input type="text" id="goalTarget" placeholder="Target (e.g., 90% productivity)"
+                    class="w-full mb-3 px-4 py-2 border rounded" required>
+                <input type="date" id="goalDue" class="w-full mb-3 px-4 py-2 border rounded" required>
+                <select id="goalAssignTo" class="w-full mb-3 px-4 py-2 border rounded" required>
+                    <option value="">Assign to...</option>
+                </select>
+                <div class="flex space-x-2">
+                    <button type="submit" class="mtn-yellow-bg text-black py-2 px-4 rounded">Create</button>
+                    <button type="button" onclick="closeGoalModal()"
+                        class="bg-gray-300 py-2 px-4 rounded">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    </footer>
+
+    <script src="src/config.js"></script>
+    <script>
+        const currentUser = Auth.getUser() || { id: "1", name: "John Doe", role: "supervisor", team: "IT" };
+
+        document.getElementById('userInitials').textContent = currentUser.name.split(' ').map(n => n[0]).join('');
+        document.getElementById('userName').textContent = `${currentUser.name} (${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)})`;
+
+        const tbody = document.getElementById('goalsTbody');
+
+        async function loadGoals() {
+            try {
+                const userId = currentUser.id;
+                const role = currentUser.role;
+
+                const res = await apiFetch(`${API_BASE}/api/goals?userId=${userId}&role=${role}`);
+                const goals = await res.json();
+
+                if (goals.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No goals assigned yet. Click "Seed Sample Goals" to add demo data.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                let completed = 0, atRisk = 0;
+
+                goals.forEach(g => {
+                    const progress = g.progress || 0;
+                    const isCompleted = progress >= 100;
+                    const isAtRisk = progress < 50 && new Date(g.dueDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+                    if (isCompleted) completed++;
+                    if (isAtRisk) atRisk++;
+
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td class="px-6 py-4 text-sm font-medium text-black">${g.assignedName || g.assignedTo}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">${g.title}</td>
+                        <td class="px-6 py-4 text-sm text-gray-800">${g.target}</td>
+                        <td class="px-6 py-4 text-sm text-gray-800">${new Date(g.dueDate).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 text-sm">
+                            <div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>
+                            <span class="text-xs text-gray-600">${progress}%</span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isCompleted ? 'bg-green-100 text-green-800' :
+                            isAtRisk ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                        }">
+                                ${isCompleted ? 'Completed' : isAtRisk ? 'At Risk' : 'On Track'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-right">
+                            <a href="#" class="text-yellow-600 hover:text-yellow-900">Edit</a>
+                        </td>
+                    `;
+                });
+
+                document.getElementById('totalGoals').textContent = goals.length;
+                document.getElementById('completedGoals').textContent = completed;
+                document.getElementById('atRiskGoals').textContent = atRisk;
+
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-4 text-center text-red-500">Error loading goals: ${err.message}</td></tr>`;
+                console.error(err);
+            }
+        }
+
+        async function loadEmployeesForAssignment() {
+            try {
+                const res = await apiFetch(`${API_BASE}/users?team=${currentUser.team}&role=employee`);
+                const users = await res.json();
+                const select = document.getElementById('goalAssignTo');
+                users.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = u.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error('Load employees error:', err);
+            }
+        }
+
+        document.getElementById('newGoalBtn').onclick = () => {
+            loadEmployeesForAssignment();
+            document.getElementById('goalModal').style.display = 'block';
+        };
+
+        function closeGoalModal() {
+            document.getElementById('goalModal').style.display = 'none';
+            document.getElementById('goalForm').reset();
+        }
+
+        document.getElementById('goalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('goalTitle').value;
+            const target = document.getElementById('goalTarget').value;
+            const dueDate = document.getElementById('goalDue').value;
+            const assignedTo = document.getElementById('goalAssignTo').value;
+
+            try {
+                await apiFetch(`${API_BASE}/api/goals?userId=${currentUser.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, target, dueDate, assignedTo, progress: 0 })
+                });
+                loadGoals();
+                closeGoalModal();
+            } catch (err) {
+                console.error('Create goal error:', err);
+            }
+        });
+
+        document.getElementById('seedBtn').onclick = async () => {
+            try {
+                await apiFetch(`${API_BASE}/seed-goals`, { method: 'POST' });
+                loadGoals();
+            } catch (err) {
+                console.error('Seed error:', err);
+            }
+        };
+
+        document.getElementById('logoutBtn').onclick = (e) => {
+            e.preventDefault();
+            Auth.logout();
+        };
+
+        loadGoals();
+    </script>
+</body>
+
+</html>

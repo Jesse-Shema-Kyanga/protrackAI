@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProTrackAI Agent - Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #fff;
+        }
+        .login-container {
+            background: #2d2d2d;
+            border-radius: 12px;
+            padding: 40px;
+            width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border: 2px solid #ffcc00;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #ffcc00;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .logo p {
+            color: #999;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #ccc;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #1a1a1a;
+            border: 2px solid #444;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #ffcc00;
+        }
+        input::placeholder {
+            color: #666;
+        }
+        .error-message {
+            color: #ff4444;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+        .error-message.show {
+            display: block;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #ffcc00;
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+        }
+        button:hover {
+            background: #ffd700;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .spinner {
+            display: none;
+            border: 3px solid #333;
+            border-top: 3px solid #ffcc00;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #999;
+        }
+        .status.error {
+            color: #ff4444;
+        }
+        .status.success {
+            color: #44ff44;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>ProTrackAI</h1>
+            <p>Agent Login Required</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="userId">Employee ID</label>
+                <input 
+                    type="text" 
+                    id="userId" 
+                    placeholder="e.g., 25147" 
+                    required
+                    autocomplete="off"
+                >
+                <div class="error-message" id="userIdError">Employee ID is required</div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    placeholder="••••••••" 
+                    required
+                >
+                <div class="error-message" id="passwordError">Password is required</div>
+            </div>
+
+            <button type="submit" id="loginBtn">
+                <span id="btnText">Login & Start Tracking</span>
+                <div class="spinner" id="spinner"></div>
+            </button>
+        </form>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        const form = document.getElementById('loginForm');
+        const userIdInput = document.getElementById('userId');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const status = document.getElementById('status');
+        const userIdError = document.getElementById('userIdError');
+        const passwordError = document.getElementById('passwordError');
+
+        // Clear errors on input
+        userIdInput.addEventListener('input', () => {
+            userIdError.classList.remove('show');
+        });
+
+        passwordInput.addEventListener('input', () => {
+            passwordError.classList.remove('show');
+        });
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userId = userIdInput.value.trim();
+            const password = passwordInput.value;
+
+            // Validation
+            let hasError = false;
+
+            if (!userId) {
+                userIdError.classList.add('show');
+                hasError = true;
+            }
+
+            if (!password) {
+                passwordError.classList.add('show');
+                hasError = true;
+            }
+
+            if (hasError) return;
+
+            // Show loading state
+            loginBtn.disabled = true;
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+            status.textContent = 'Authenticating...';
+            status.className = 'status';
+
+            // Send credentials to main process
+            ipcRenderer.send('login-attempt', { userId, password });
+        });
+
+        // Listen for login result from main process
+        ipcRenderer.on('login-result', (event, result) => {
+            loginBtn.disabled = false;
+            btnText.style.display = 'block';
+            spinner.style.display = 'none';
+
+            if (result.success) {
+                status.textContent = `Welcome ${result.user.name}! Starting tracking...`;
+                status.className = 'status success';
+                
+                // Close window after 1 second
+                setTimeout(() => {
+                    ipcRenderer.send('login-success');
+                }, 1000);
+            } else {
+                status.textContent = result.error || 'Login failed. Please try again.';
+                status.className = 'status error';
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        });
+
+        // Focus first input on load
+        userIdInput.focus();
+    </script>
+</body>
+</html>
