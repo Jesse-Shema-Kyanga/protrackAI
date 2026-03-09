@@ -1,13 +1,15 @@
 import { useState, useEffect, useContext } from 'react';
 import {
     Grid, Paper, Typography, Box, List, ListItem, ListItemText,
-    CircularProgress, Chip, Button
+    CircularProgress, Chip, Button, TextField, Dialog, DialogTitle,
+    DialogContent, DialogActions
 } from '@mui/material';
 import ReactJoyride from 'react-joyride';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import GetApp from '@mui/icons-material/GetApp';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -17,6 +19,9 @@ const EmployeeDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [isCheckedIn, setIsCheckedIn] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     const fetchDashboardData = async () => {
         if (!user?.id) return;
@@ -71,6 +76,26 @@ const EmployeeDashboard = () => {
         }
     };
 
+    const handleDownloadPDF = async () => {
+        if (!startDate || !endDate) return alert("Please select a date range!");
+        try {
+            const response = await axios.get(`/api/reports/pdf?userId=${user.id}&start=${startDate}&end=${endDate}`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `My_MTN_Performance_Audit_${startDate}_to_${endDate}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setReportModalOpen(false);
+        } catch (err) {
+            console.error("PDF Download Error:", err);
+            alert("Failed to generate report.");
+        }
+    };
+
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}><CircularProgress color="primary" /></Box>;
     if (!data) return <Typography color="error" align="center" mt={5}>Failed to load dashboard data. Please check your connection.</Typography>;
 
@@ -109,6 +134,14 @@ const EmployeeDashboard = () => {
                 </Box>
                 <Box display="flex" gap={2} alignItems="center">
                     <Button
+                        variant="outlined"
+                        startIcon={<GetApp />}
+                        onClick={() => setReportModalOpen(true)}
+                        sx={{ fontWeight: 'bold', borderRadius: 2, height: 48 }}
+                    >
+                        Report
+                    </Button>
+                    <Button
                         variant="contained"
                         color={isCheckedIn ? "error" : "primary"}
                         onClick={handleAttendanceToggle}
@@ -133,6 +166,37 @@ const EmployeeDashboard = () => {
                     />
                 </Box>
             </Box>
+
+            {/* Report Dialog */}
+            <Dialog open={reportModalOpen} onClose={() => setReportModalOpen(false)}>
+                <DialogTitle sx={{ fontWeight: 'bold' }}>Generate Custom Performance Report</DialogTitle>
+                <DialogContent>
+                    <Box display="flex" gap={2} mt={2}>
+                        <TextField
+                            type="date"
+                            label="Start Date"
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                        <TextField
+                            type="date"
+                            label="End Date"
+                            InputLabelProps={{ shrink: true }}
+                            fullWidth
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3 }}>
+                    <Button onClick={() => setReportModalOpen(false)}>Cancel</Button>
+                    <Button variant="contained" onClick={handleDownloadPDF} disabled={!startDate || !endDate}>
+                        Download PDF
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Grid container spacing={3}>
                 {/* KPI Cards */}

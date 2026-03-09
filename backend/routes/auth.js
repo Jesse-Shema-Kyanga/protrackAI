@@ -11,29 +11,18 @@ const JWT_EXPIRES_IN = '7d';
 
 router.post('/login',
   [
-    body('email').optional().isEmail().withMessage('Valid email is required').normalizeEmail().trim(),
-    body('userId').optional().notEmpty().withMessage('User ID is required').trim(),
+    body('email').isEmail().withMessage('Valid email is required').normalizeEmail().trim(),
     body('password').notEmpty().withMessage('Password is required'),
     validate
   ],
   async (req, res) => {
     try {
-      const { email, userId, password } = req.body;
-      console.log('--- Login Debug ---');
-      console.log('Body:', JSON.stringify(req.body));
+      const { email, password } = req.body;
 
-      // Build query dynamically to avoid $or: [{ id: undefined }]
-      const query = {};
-      if (email) query.email = email;
-      else if (userId) query.id = userId;
-      else {
-        console.log('Error: No email or userId');
-        return res.status(400).json({ success: false, error: 'Email or User ID is required' });
-      }
+      console.log('--- Login Attempt ---');
+      console.log('Email:', email);
 
-      console.log('Query:', JSON.stringify(query));
-
-      const user = await User.findOne(query);
+      const user = await User.findOne({ email: email.toLowerCase() });
       if (!user) {
         return res.status(401).json({ success: false, error: 'User not found' });
       }

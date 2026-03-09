@@ -58,7 +58,12 @@ const RoleProtectedRoute = ({ allowedRoles }) => {
 };
 
 function App() {
-  const [mode, setMode] = useState('light');
+  const [mode, setMode] = useState(() => localStorage.getItem('themeMode') || 'light');
+
+  // Persist theme mode
+  useEffect(() => {
+    localStorage.setItem('themeMode', mode);
+  }, [mode]);
 
   // Clean listeners on mount
   useEffect(() => {

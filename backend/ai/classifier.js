@@ -759,7 +759,18 @@ class ActivityClassifier {
             }
 
             // ==========================================
-            // LAYER 0: KNOWN ENTERTAINMENT APPS (99% Confidence)
+            // LAYER 0: Weighted Rules (User/Supervisor Overrides)
+            // ==========================================
+
+            for (const [domain, rule] of Object.entries(this.weightedRules)) {
+                if (lower.includes(domain.toLowerCase())) {
+                    const cat = rule.weight === 1 ? 'productive' : (rule.weight === -1 ? 'non-productive' : 'neutral');
+                    return { category: cat, confidence: 1.0, reason: `Custom rule: ${domain}` };
+                }
+            }
+
+            // ==========================================
+            // LAYER 1: KNOWN ENTERTAINMENT APPS (99% Confidence)
             // ==========================================
             // These apps are ALWAYS non-productive, no exceptions
 
@@ -777,17 +788,6 @@ class ActivityClassifier {
                 if (lower.includes(app)) {
                     console.log(`[AI DEFENSIVE] "${text.substring(0, 60)}..." → [non-productive] (99% - Known entertainment app: ${app})`);
                     return { category: 'non-productive', confidence: 0.99, reason: `Known entertainment app: ${app}` };
-                }
-            }
-
-            // ==========================================
-            // LAYER 1: Weighted Rules (User/Supervisor Overrides)
-            // ==========================================
-
-            for (const [domain, rule] of Object.entries(this.weightedRules)) {
-                if (lower.includes(domain.toLowerCase())) {
-                    const cat = rule.weight === 1 ? 'productive' : (rule.weight === -1 ? 'non-productive' : 'neutral');
-                    return { category: cat, confidence: 1.0, reason: `Custom rule: ${domain}` };
                 }
             }
 

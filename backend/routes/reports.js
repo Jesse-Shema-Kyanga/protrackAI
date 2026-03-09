@@ -8,6 +8,18 @@ const Task = require('../models/Task');
 const { authMiddleware } = require('../middleware/auth');
 const { sanitizeActivities, aggregateByDomain } = require('../utils/privacy');
 const PDFDocument = require('pdfkit');
+const axios = require('axios');
+
+// Fetch MTN Logo once to avoid repeated network calls if possible, but for dynamic PDFs we fetch as needed or use a local cache
+const fetchMTNLogo = async () => {
+  try {
+    const response = await axios.get('https://logonoid.com/images/mtn-logo.jpg', { responseType: 'arraybuffer' });
+    return Buffer.from(response.data, 'binary');
+  } catch (err) {
+    console.error('Failed to fetch MTN logo:', err);
+    return null;
+  }
+};
 
 // Protect all report routes
 router.use(authMiddleware);
@@ -76,7 +88,13 @@ router.get('/pdf', async (req, res) => {
     // Calculate date range
     const now = new Date();
     let startDate;
-    if (period === 'week') {
+    let endDate = new Date();
+
+    if (req.query.start && req.query.end) {
+      startDate = new Date(req.query.start);
+      endDate = new Date(req.query.end);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (period === 'week') {
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     } else if (period === 'month') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -87,22 +105,22 @@ router.get('/pdf', async (req, res) => {
     // Fetch data
     const activities = await Activity.find({
       userId,
-      timestamp: { $gte: startDate }
+      timestamp: { $gte: startDate, $lte: endDate }
     }).sort({ timestamp: -1 });
 
     const timeLogs = await TimeLog.find({
       userId,
-      timestamp: { $gte: startDate }
+      timestamp: { $gte: startDate, $lte: endDate }
     });
 
     const goals = await Goal.find({
       assignedTo: userId,
-      createdAt: { $gte: startDate }
+      createdAt: { $gte: startDate, $lte: endDate }
     });
 
     const tasks = await Task.find({
       userId: userId,
-      timestamp: { $gte: startDate }
+      timestamp: { $gte: startDate, $lte: endDate }
     });
 
     // Calculate metrics
@@ -142,7 +160,13 @@ router.get('/pdf', async (req, res) => {
       .text('ProTrackAI Performance Report', { align: 'center' });
 
     doc.fontSize(10).font('Helvetica').fillColor('#666')
-      .text('Official Productivity Record - MTN Rwanda', { align: 'center' });
+      .text('MTN RWANDA PERFORMANCE AUDIT', { align: 'center' });
+
+    // Fetch and draw logo if available
+    const logoBuffer = await fetchMTNLogo();
+    if (logoBuffer) {
+      doc.image(logoBuffer, 50, 40, { width: 40 });
+    }
 
     // Pre-calculate Audit Logs before streaming to avoid database wait during pipe
     const recentCheckIns = checkIns.slice(0, 5);
@@ -199,34 +223,27 @@ router.get('/pdf', async (req, res) => {
     doc.rect(50, doc.y, 512, 1).fill('#eee');
     doc.moveDown(1);
 
-    // KPI Section with boxes
+    // KPI Section with MTN Branded progress bars
     doc.fontSize(14).font('Helvetica-Bold').fillColor('#000')
       .text('Key Performance Indicators');
-    doc.moveDown(1);
+    doc.moveDown(1.5);
 
     const kpiY = doc.y;
 
-    // KPI 1: Productivity
-    doc.rect(50, kpiY, 115, 60).stroke('#eee');
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#666').text('PRODUCTIVITY', 60, kpiY + 10);
-    doc.fontSize(18).font('Helvetica-Bold').fillColor('#4caf50').text(`${productivityRate}%`, 60, kpiY + 25);
+    const drawKPIBox = (label, value, x, y, color) => {
+      doc.rect(x, y, 115, 70).fillAndStroke('#fff', '#eee');
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#666').text(label, x + 10, y + 10);
+      doc.fontSize(20).font('Helvetica-Bold').fillColor(color).text(value, x + 10, y + 25);
+      // Modern bottom bar
+      doc.rect(x, y + 68, 115, 2).fill(color);
+    };
 
-    // KPI 2: Attendance
-    doc.rect(175, kpiY, 115, 60).stroke('#eee');
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#666').text('ATTENDANCE', 185, kpiY + 10);
-    doc.fontSize(18).font('Helvetica-Bold').fillColor('#ffcc00').text(`${attendanceScore}%`, 185, kpiY + 25);
+    drawKPIBox('PRODUCTIVITY', `${productivityRate}%`, 50, kpiY, '#000');
+    drawKPIBox('ATTENDANCE', `${attendanceScore}%`, 175, kpiY, '#ffcc00');
+    drawKPIBox('GOAL SUCCESS', `${goalSuccessRate}%`, 300, kpiY, '#000');
+    drawKPIBox('TASK COMPLETION', `${taskCompletionRate}%`, 425, kpiY, '#ffcc00');
 
-    // KPI 3: Goals
-    doc.rect(300, kpiY, 115, 60).stroke('#eee');
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#666').text('GOALS MET', 310, kpiY + 10);
-    doc.fontSize(18).font('Helvetica-Bold').fillColor('#2196f3').text(`${goalSuccessRate}%`, 310, kpiY + 25);
-
-    // KPI 4: Tasks
-    doc.rect(425, kpiY, 115, 60).stroke('#eee');
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#666').text('TASKS DONE', 435, kpiY + 10);
-    doc.fontSize(18).font('Helvetica-Bold').fillColor('#9c27b0').text(`${taskCompletionRate}%`, 435, kpiY + 25);
-
-    doc.moveDown(5);
+    doc.moveDown(6);
 
     // Details Sections
     doc.fontSize(14).font('Helvetica-Bold').fillColor('#000')
@@ -339,7 +356,13 @@ router.get('/team-pdf', async (req, res) => {
     // Calculate date range
     const now = new Date();
     let startDate;
-    if (period === 'week') {
+    let endDate = new Date();
+
+    if (req.query.start && req.query.end) {
+      startDate = new Date(req.query.start);
+      endDate = new Date(req.query.end);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (period === 'week') {
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     } else if (period === 'month') {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -350,17 +373,17 @@ router.get('/team-pdf', async (req, res) => {
     // Aggregate data for all employees at once to be efficient
     const allActivities = await Activity.find({
       userId: { $in: employeeIds },
-      timestamp: { $gte: startDate }
+      timestamp: { $gte: startDate, $lte: endDate }
     });
 
     const allTimeLogs = await TimeLog.find({
       userId: { $in: employeeIds },
-      timestamp: { $gte: startDate }
+      timestamp: { $gte: startDate, $lte: endDate }
     });
 
     const allTasks = await Task.find({
       userId: { $in: employeeIds },
-      timestamp: { $gte: startDate }
+      timestamp: { $gte: startDate, $lte: endDate }
     });
 
     // Per-user metrics map
@@ -405,6 +428,13 @@ router.get('/team-pdf', async (req, res) => {
     doc.rect(0, 0, 595, 15).fill('#ffcc00');
     doc.moveDown(2);
     doc.fontSize(20).font('Helvetica-Bold').fillColor('#000').text('Team Performance Executive Summary', { align: 'center' });
+    doc.fontSize(10).font('Helvetica').fillColor('#666').text('MTN RWANDA CORPORATE AUDIT', { align: 'center' });
+
+    // Logo for Team Report
+    const logoBufferTeam = await fetchMTNLogo();
+    if (logoBufferTeam) {
+      doc.image(logoBufferTeam, 40, 35, { width: 45 });
+    }
     doc.fontSize(10).font('Helvetica').fillColor('#666').text(`Team: ${team} | Period: ${period.toUpperCase()}`, { align: 'center' });
     doc.text(`Generated on: ${now.toLocaleString()}`, { align: 'center' });
 
@@ -418,13 +448,12 @@ router.get('/team-pdf', async (req, res) => {
     doc.text('Employee Name', 40, tableTop);
     doc.text('ID', 160, tableTop);
     doc.text('Prod %', 230, tableTop);
-    doc.text('Hrs', 300, tableTop);
     doc.text('Att %', 350, tableTop);
-    doc.text('Task %', 420, tableTop);
-    doc.text('Status', 490, tableTop);
+    doc.text('Tasks', 420, tableTop);
+    doc.text('Rating', 490, tableTop);
 
     doc.moveDown(0.5);
-    doc.rect(40, doc.y, 515, 1).fill('#333');
+    doc.rect(40, doc.y, 515, 1).fill('#ffcc00'); // MTN Gold line
     doc.moveDown(0.5);
 
     // Table Rows
@@ -498,13 +527,23 @@ router.get('/hr-pdf', async (req, res) => {
     // Calculate date range
     const now = new Date();
     let startDate;
-    if (period === 'week') startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    else if (period === 'month') startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    else startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    let endDate = new Date();
+
+    if (req.query.start && req.query.end) {
+      startDate = new Date(req.query.start);
+      endDate = new Date(req.query.end);
+      endDate.setHours(23, 59, 59, 999);
+    } else if (period === 'week') {
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (period === 'month') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else {
+      startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    }
 
     // Fetch all workforce data in one scope
     const allUsers = await User.find({}).select('id name dept team role');
-    const allActivities = await Activity.find({ timestamp: { $gte: startDate } });
+    const allActivities = await Activity.find({ timestamp: { $gte: startDate, $lte: endDate } });
 
     // 1. Overall Metrics
     const totalStaff = allUsers.filter(u => u.role === 'employee').length;
@@ -554,8 +593,14 @@ router.get('/hr-pdf', async (req, res) => {
     doc.fontSize(10).font('Helvetica').fillColor('#666').text(`EXECUTIVE SUMMARY | PERIOD: ${period.toUpperCase()}`, { align: 'center' });
     doc.text(`Generated: ${now.toLocaleString()}`, { align: 'center' });
 
+    // Draw MTN Logo for HR
+    const logoBufferHR = await fetchMTNLogo();
+    if (logoBufferHR) {
+      doc.image(logoBufferHR, 40, 45, { width: 50 });
+    }
+
     doc.moveDown(2);
-    doc.rect(40, doc.y, 515, 1).fill('#eee');
+    doc.rect(40, doc.y, 515, 1).fill('#ffcc00');
     doc.moveDown(1.5);
 
     // Master KPIs

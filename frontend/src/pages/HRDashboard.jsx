@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Grid, Paper, Typography, Box, Select, MenuItem, FormControl, Button,
     List, ListItem, ListItemText, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Chip, CircularProgress
+    TableHead, TableRow, Chip, CircularProgress, TextField
 } from '@mui/material';
 import Assessment from '@mui/icons-material/Assessment';
 import Warning from '@mui/icons-material/Warning';
@@ -23,6 +23,8 @@ const HRDashboard = () => {
     const [analytics, setAnalytics] = useState(null);
     const [evals, setEvals] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -30,9 +32,12 @@ const HRDashboard = () => {
             setLoading(true);
             try {
                 // 1. HR Analytics - Standardized route: /api/analytics/hr
-                const analyticsRes = await axios.get(`/api/analytics/hr`, {
-                    params: { period }
-                }).catch(e => ({ data: { departments: [], teams: [], prodRatio: 0 } }));
+                const params = { period };
+                if (period === 'custom' && startDate && endDate) {
+                    params.start = startDate;
+                    params.end = endDate;
+                }
+                const analyticsRes = await axios.get(`/api/analytics/hr`, { params }).catch(e => ({ data: { departments: [], teams: [], prodRatio: 0 } }));
 
                 // 2. Evaluations
                 const evalsRes = await axios.get('/api/evals?hr=true').catch(e => ({ data: { pendingCount: 0 } }));
@@ -47,17 +52,21 @@ const HRDashboard = () => {
         };
 
         fetchData();
-    }, [user, period]);
+    }, [user, period, startDate, endDate]);
 
     const handleDownloadPDF = async () => {
         try {
-            const response = await axios.get(`/api/reports/hr-pdf?period=${period}`, {
+            let urlParams = `period=${period}`;
+            if (period === 'custom' && startDate && endDate) {
+                urlParams = `start=${startDate}&end=${endDate}`;
+            }
+            const response = await axios.get(`/api/reports/hr-pdf?${urlParams}`, {
                 responseType: 'blob'
             });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `MTN_RWANDA_Executive_Report_${period}.pdf`);
+            link.setAttribute('download', `MTN_Executive_Audit_Report_${period}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -96,8 +105,31 @@ const HRDashboard = () => {
                             <MenuItem value="week">This Week</MenuItem>
                             <MenuItem value="month">This Month</MenuItem>
                             <MenuItem value="quarter">This Quarter</MenuItem>
+                            <MenuItem value="custom">Custom Range</MenuItem>
                         </Select>
                     </FormControl>
+                    {period === 'custom' && (
+                        <Box display="flex" gap={1} alignItems="center">
+                            <TextField
+                                type="date"
+                                size="small"
+                                label="Start"
+                                InputLabelProps={{ shrink: true }}
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                sx={{ width: 150 }}
+                            />
+                            <TextField
+                                type="date"
+                                size="small"
+                                label="End"
+                                InputLabelProps={{ shrink: true }}
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                sx={{ width: 150 }}
+                            />
+                        </Box>
+                    )}
                     <Button
                         variant="contained"
                         color="secondary"

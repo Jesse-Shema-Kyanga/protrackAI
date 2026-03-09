@@ -22,13 +22,6 @@ router.post('/raw', authMiddleware, async (req, res) => {
     // AI Classification with Temporal Context
     // We now combine App Name + Window Title + URL to give the AI more context
 
-    // --- FIX: App Name Remapping for UWP ---
-    let finalAppName = app;
-    if (app === 'ApplicationFrameHost') {
-      if (title?.toLowerCase().includes('whatsapp')) finalAppName = 'WhatsApp';
-      else if (title?.toLowerCase().includes('notepad')) finalAppName = 'Notepad';
-    }
-
     // --- FIX: Strict Clock-In Enforcement ---
     // Check if user is actually clocked in TODAY. If not, ignore this activity.
     // This prevents "Starting Clocked In" issue by discarding agent data until manual clock-in.
@@ -68,6 +61,20 @@ router.post('/raw', authMiddleware, async (req, res) => {
       return res.json({ success: true, ignored: true });
     }
 
+    // --- FIX: App Name Remapping & Normalization ---
+    let finalAppName = app;
+    if (app === 'ApplicationFrameHost') {
+      if (title?.toLowerCase().includes('whatsapp')) finalAppName = 'WhatsApp';
+      else if (title?.toLowerCase().includes('notepad')) finalAppName = 'Notepad';
+    }
+    // Deep Normalization for WhatsApp (consistent with classifier)
+    if (finalAppName.toLowerCase().includes('whatsapp')) {
+      finalAppName = 'WhatsApp';
+    }
+    if (finalAppName.toLowerCase().includes('msedge')) {
+      finalAppName = 'Microsoft Edge';
+    }
+
     const textToClassify = `${finalAppName} ${title || ''} ${url || ''}`;
 
     // Fetch last 3 activities for temporal continuity context
@@ -83,8 +90,7 @@ router.post('/raw', authMiddleware, async (req, res) => {
     // Returns object: { category, confidence, reason }
     let { category, confidence } = await classifier.classify(textToClassify, recentActivities, userRole);
 
-    // --- FIX: WhatsApp Policy (Auto-flag if > 1hr) ---
-    // --- FIX: WhatsApp Policy (Prompt for Explanation) ---
+    // --- FIX: WhatsApp Policy (Neutral for 1st hour, then Non-Productive + Escalation) ---
     if (finalAppName === 'WhatsApp') {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -103,9 +109,8 @@ router.post('/raw', authMiddleware, async (req, res) => {
       const totalSeconds = whatsAppStats[0]?.totalDuration || 0;
 
       if (totalSeconds > 3600) { // > 1 hour
-        // Check if we already asked for explanation TODAY
-        // Note: Notification required inside this block
         const Notification = require('../models/Notification');
+        const User = require('../models/User');
         const existingPrompt = await Notification.findOne({
           userId: employeeId,
           type: 'whatsapp_prompt',
@@ -113,20 +118,44 @@ router.post('/raw', authMiddleware, async (req, res) => {
         });
 
         if (!existingPrompt) {
+          const userObj = await User.findOne({ id: employeeId }); // Changed id to _id for Mongoose
+          const userName = userObj ? userObj.name : employeeId;
+
+          // 1. Alert Employee
           await Notification.create({
             userId: employeeId,
             targetRoleId: 'employee',
             type: 'whatsapp_prompt',
-            message: 'High WhatsApp usage detected (>1hr). Please provide an explanation.',
+            message: 'High WhatsApp usage detected (>1hr). Please report to HR to explain your WhatsApp usage.',
+            read: false
+          });
+
+          // 2. Alert Supervisor
+          await Notification.create({
+            userId: employeeId,
+            targetRoleId: 'supervisor',
+            team: userObj?.team,
+            type: 'whatsapp_prompt',
+            message: `High WhatsApp usage detected for ${userName}. This employee needs some talking to.`,
+            read: false
+          });
+
+          // 3. Alert HR
+          await Notification.create({
+            userId: employeeId,
+            targetRoleId: 'hr',
+            dept: userObj?.dept,
+            type: 'whatsapp_prompt',
+            message: `High WhatsApp usage detected for ${userName} (>1hr). This employee needs some talking to.`,
             read: false
           });
         }
-        if (category === 'productive') category = 'neutral';
+        category = 'non-productive';
       } else {
-        if (category !== 'non-productive') category = 'neutral';
+        // First hour is neutral
+        category = 'neutral';
       }
     }
-
     const newAct = await Activity.create({
       userId: employeeId,
       appName: finalAppName,

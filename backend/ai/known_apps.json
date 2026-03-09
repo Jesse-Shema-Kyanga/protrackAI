@@ -111,6 +111,7 @@
         "cursor",
         "cursor.sh",
         "antigravity",
+        "protrackai",
         "google gemini",
         "bard",
         "anthropic",
@@ -186,7 +187,14 @@
         "unsplash",
         "concur",
         "azure devops",
-        "aws billing"
+        "aws billing",
+        "chrome",
+        "msedge",
+        "microsoft edge",
+        "firefox",
+        "brave",
+        "safari",
+        "whatsapp"
     ],
     "neutral": [
         "explorer",
@@ -263,7 +271,6 @@
         "google flights",
         "digikey",
         "telegram",
-        "whatsapp",
         "applicationframehost",
         "baidu"
     ],
@@ -388,6 +395,14 @@
         "zillow",
         "uber eats",
         "duolingo",
-        "steam"
+        "steam",
+        "pornhub",
+        "xvideos",
+        "xnxx",
+        "xhamster",
+        "redtube",
+        "brazzers",
+        "rule34",
+        "hentai"
     ]
 }

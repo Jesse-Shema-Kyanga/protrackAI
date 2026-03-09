@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { Box, Paper, Typography, Grid, CircularProgress, List, ListItem, ListItemText, Chip, Button, useTheme, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Box, Paper, Typography, Grid, CircularProgress, List, ListItem, ListItemText, Chip, Button, useTheme, Select, MenuItem, FormControl, InputLabel, TextField } from '@mui/material';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Download, PictureAsPdf } from '@mui/icons-material';
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -18,6 +18,9 @@ const ActivityAnalytics = () => {
     const [loading, setLoading] = useState(true);
     const [employees, setEmployees] = useState([]);
     const [selectedUserId, setSelectedUserId] = useState(user.id);
+    const [period, setPeriod] = useState('month');
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     useEffect(() => {
         if (user.role === 'supervisor') {
@@ -38,7 +41,12 @@ const ActivityAnalytics = () => {
             setLoading(true);
             try {
                 // Fetch report for selected user
-                const res = await axios.get(`/api/reports?userId=${selectedUserId}&period=week`);
+                const params = { userId: selectedUserId, period };
+                if (period === 'custom' && startDate && endDate) {
+                    params.start = startDate;
+                    params.end = endDate;
+                }
+                const res = await axios.get(`/api/reports`, { params });
                 setData(res.data);
             } catch (err) {
                 console.error("Analytics Error:", err);
@@ -47,7 +55,7 @@ const ActivityAnalytics = () => {
             }
         };
         fetchReport();
-    }, [selectedUserId]);
+    }, [selectedUserId, period, startDate, endDate]);
 
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 10 }}><CircularProgress /></Box>;
     if (!data) return <Typography align="center" variant="h6" color="textSecondary" sx={{ py: 10 }}>No analytical data available for this segment.</Typography>;
@@ -73,7 +81,17 @@ const ActivityAnalytics = () => {
     };
 
     const barOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15,
+                    font: { size: 11 }
+                }
+            },
             tooltip: {
                 callbacks: {
                     label: (context) => {
@@ -88,7 +106,11 @@ const ActivityAnalytics = () => {
         scales: {
             y: {
                 beginAtZero: true,
-                title: { display: true, text: 'Minutes' }
+                title: { display: true, text: 'Minutes', font: { weight: 'bold' } },
+                grid: { color: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+            },
+            x: {
+                grid: { display: false }
             }
         }
     };
@@ -124,6 +146,8 @@ const ActivityAnalytics = () => {
 
     const hBarOptions = {
         indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
             tooltip: {
@@ -136,7 +160,11 @@ const ActivityAnalytics = () => {
             x: {
                 beginAtZero: true,
                 max: 100,
-                title: { display: true, text: 'Percentage' }
+                title: { display: true, text: 'Percentage', font: { weight: 'bold' } },
+                grid: { color: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+            },
+            y: {
+                grid: { display: false }
             }
         }
     };
@@ -208,6 +236,42 @@ const ActivityAnalytics = () => {
                                 </Select>
                             </FormControl>
                         )}
+                        <FormControl size="small" sx={{ mt: 1, ml: 1, minWidth: 150 }}>
+                            <InputLabel>Period</InputLabel>
+                            <Select
+                                value={period}
+                                label="Period"
+                                onChange={(e) => setPeriod(e.target.value)}
+                                sx={{ bgcolor: 'background.paper', borderRadius: 2 }}
+                            >
+                                <MenuItem value="today">Today</MenuItem>
+                                <MenuItem value="week">This Week</MenuItem>
+                                <MenuItem value="month">This Month</MenuItem>
+                                <MenuItem value="custom">Custom Range</MenuItem>
+                            </Select>
+                        </FormControl>
+                        {period === 'custom' && (
+                            <Box display="flex" gap={1} mt={1}>
+                                <TextField
+                                    type="date"
+                                    size="small"
+                                    label="Start"
+                                    InputLabelProps={{ shrink: true }}
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    sx={{ width: 140 }}
+                                />
+                                <TextField
+                                    type="date"
+                                    size="small"
+                                    label="End"
+                                    InputLabelProps={{ shrink: true }}
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    sx={{ width: 140 }}
+                                />
+                            </Box>
+                        )}
                     </Box>
                     <Box display="flex" gap={2}>
                         {user.role === 'supervisor' && (
@@ -217,7 +281,11 @@ const ActivityAnalytics = () => {
                                 color="secondary"
                                 onClick={async () => {
                                     try {
-                                        const response = await axios.get(`/api/reports/team-pdf?period=month`, {
+                                        let urlParams = `period=${period}`;
+                                        if (period === 'custom' && startDate && endDate) {
+                                            urlParams = `start=${startDate}&end=${endDate}`;
+                                        }
+                                        const response = await axios.get(`/api/reports/team-pdf?${urlParams}`, {
                                             responseType: 'blob'
                                         });
                                         const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -242,7 +310,11 @@ const ActivityAnalytics = () => {
                             variant="contained"
                             onClick={async () => {
                                 try {
-                                    const response = await axios.get(`/api/reports/pdf?userId=${selectedUserId}&period=month`, {
+                                    let urlParams = `userId=${selectedUserId}&period=${period}`;
+                                    if (period === 'custom' && startDate && endDate) {
+                                        urlParams = `userId=${selectedUserId}&start=${startDate}&end=${endDate}`;
+                                    }
+                                    const response = await axios.get(`/api/reports/pdf?${urlParams}`, {
                                         responseType: 'blob'
                                     });
                                     const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -285,17 +357,17 @@ const ActivityAnalytics = () => {
             <Grid size={{ xs: 12, md: 8 }}>
                 <Grid container spacing={3}>
                     <Grid size={{ xs: 12 }}>
-                        <Paper sx={{ p: 3 }}>
-                            <Typography variant="h6" gutterBottom>Activity Distribution (24h)</Typography>
-                            <Box sx={{ height: 250 }}>
+                        <Paper sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="h6" gutterBottom fontWeight="bold">Activity Distribution (24h)</Typography>
+                            <Box sx={{ height: 250, mt: 'auto' }}>
                                 <Bar data={barData} options={barOptions} />
                             </Box>
                         </Paper>
                     </Grid>
                     <Grid size={{ xs: 12 }}>
-                        <Paper sx={{ p: 3 }}>
-                            <Typography variant="h6" gutterBottom>Top Tools Used (% Effort)</Typography>
-                            <Box sx={{ height: 250 }}>
+                        <Paper sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="h6" gutterBottom fontWeight="bold">Top Tools Used (% Effort)</Typography>
+                            <Box sx={{ height: 250, mt: 'auto' }}>
                                 <Bar data={hBarData} options={hBarOptions} />
                             </Box>
                         </Paper>
@@ -303,18 +375,18 @@ const ActivityAnalytics = () => {
                 </Grid>
             </Grid>
             <Grid size={{ xs: 12, md: 4 }}>
-                <Paper sx={{ p: 3 }}>
-                    <Typography variant="h6">Breakdown</Typography>
-                    <Box sx={{ height: 300, position: 'relative' }}>
+                <Paper sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="h6" fontWeight="bold" gutterBottom>Breakdown</Typography>
+                    <Box sx={{ flexGrow: 1, minHeight: 400, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Doughnut data={pieData} options={chartOptions} />
                         <Box sx={{
-                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -10%)',
+                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -15%)',
                             textAlign: 'center', pointerEvents: 'none'
                         }}>
-                            <Typography variant="h4" fontWeight="900" sx={{ color: '#4caf50' }}>
+                            <Typography variant="h3" fontWeight="900" sx={{ color: '#4caf50' }}>
                                 {prodSec + nonProdSec + neutralSec > 0 ? Math.round((prodSec / (prodSec + nonProdSec + neutralSec)) * 100) : 0}%
                             </Typography>
-                            <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 'bold' }}>
+                            <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
                                 PRODUCTIVE
                             </Typography>
                         </Box>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import {
     Grid, Paper, Typography, Box, Select, MenuItem, FormControl, Button,
-    List, ListItem, ListItemText, CircularProgress, Chip
+    List, ListItem, ListItemText, CircularProgress, Chip, TextField
 } from '@mui/material';
 import {
     TrendingUp, TrendingDown, Assessment, Warning, CheckCircle,
@@ -34,6 +34,8 @@ const SupervisorDashboard = () => {
     const [period, setPeriod] = useState('month');
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -44,7 +46,9 @@ const SupervisorDashboard = () => {
                     params: {
                         supId: user.id || user.userId,
                         team: user.team,
-                        period
+                        period,
+                        start: period === 'custom' ? startDate : undefined,
+                        end: period === 'custom' ? endDate : undefined
                     }
                 }).catch(e => ({ data: null }));
 
@@ -56,17 +60,21 @@ const SupervisorDashboard = () => {
             }
         };
         fetchData();
-    }, [user, period]);
+    }, [user, period, startDate, endDate]);
 
     const handleDownloadTeamPDF = async () => {
         try {
-            const response = await axios.get(`/api/reports/team-pdf?period=${period}`, {
+            let urlParams = `period=${period}`;
+            if (period === 'custom' && startDate && endDate) {
+                urlParams = `start=${startDate}&end=${endDate}`;
+            }
+            const response = await axios.get(`/api/reports/team-pdf?${urlParams}`, {
                 responseType: 'blob'
             });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `MTN_Team_Report_${user.team}_${period}.pdf`);
+            link.setAttribute('download', `MTN_Team_Executive_Audit_${user.team}_${period}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -130,8 +138,31 @@ const SupervisorDashboard = () => {
                             <MenuItem value="today">Today</MenuItem>
                             <MenuItem value="week">This Week</MenuItem>
                             <MenuItem value="month">This Month</MenuItem>
+                            <MenuItem value="custom">Custom Range</MenuItem>
                         </Select>
                     </FormControl>
+                    {period === 'custom' && (
+                        <Box display="flex" gap={1} alignItems="center">
+                            <TextField
+                                type="date"
+                                size="small"
+                                label="Start"
+                                InputLabelProps={{ shrink: true }}
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                sx={{ width: 140 }}
+                            />
+                            <TextField
+                                type="date"
+                                size="small"
+                                label="End"
+                                InputLabelProps={{ shrink: true }}
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                sx={{ width: 140 }}
+                            />
+                        </Box>
+                    )}
                     <Button
                         variant="contained"
                         color="primary"
