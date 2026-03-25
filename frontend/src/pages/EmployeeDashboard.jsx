@@ -2,14 +2,15 @@ import { useState, useEffect, useContext } from 'react';
 import {
     Grid, Paper, Typography, Box, List, ListItem, ListItemText,
     CircularProgress, Chip, Button, TextField, Dialog, DialogTitle,
-    DialogContent, DialogActions
+    DialogContent, DialogActions, FormControl, InputLabel, Select, MenuItem,
+    Alert, AlertTitle
 } from '@mui/material';
 import ReactJoyride from 'react-joyride';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
-import GetApp from '@mui/icons-material/GetApp';
+
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -19,9 +20,9 @@ const EmployeeDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [isCheckedIn, setIsCheckedIn] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
-    const [reportModalOpen, setReportModalOpen] = useState(false);
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
+    const [awayReasonOpen, setAwayReasonOpen] = useState(false);
+    const [awayReason, setAwayReason] = useState('End of Day');
+    const [customReason, setCustomReason] = useState('');
 
     const fetchDashboardData = async () => {
         if (!user?.id) return;
@@ -57,11 +58,25 @@ const EmployeeDashboard = () => {
         fetchDashboardData();
     }, [user]);
 
-    const handleAttendanceToggle = async () => {
+    const handleAttendanceToggle = () => {
+        if (isCheckedIn) {
+            // If checked in, we want to clock out, so open the justification dialog
+            setAwayReasonOpen(true);
+        } else {
+            // Clock in immediately
+            submitTimeLog('check-in');
+        }
+    };
+
+    const submitTimeLog = async (nextType, reason = '') => {
         setActionLoading(true);
+        setAwayReasonOpen(false);
         try {
-            const nextType = isCheckedIn ? 'check-out' : 'check-in';
-            const logRes = await axios.post('/api/time/log-time', { userId: user.id, type: nextType });
+            const logRes = await axios.post('/api/time/log-time', { 
+                userId: user.id, 
+                type: nextType,
+                reason: reason
+            });
 
             if (logRes.data.success || logRes.data.message) {
                 // Optimistic update + fetch fresh data to sync
@@ -76,31 +91,12 @@ const EmployeeDashboard = () => {
         }
     };
 
-    const handleDownloadPDF = async () => {
-        if (!startDate || !endDate) return alert("Please select a date range!");
-        try {
-            const response = await axios.get(`/api/reports/pdf?userId=${user.id}&start=${startDate}&end=${endDate}`, {
-                responseType: 'blob'
-            });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `My_MTN_Performance_Audit_${startDate}_to_${endDate}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setReportModalOpen(false);
-        } catch (err) {
-            console.error("PDF Download Error:", err);
-            alert("Failed to generate report.");
-        }
-    };
-
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}><CircularProgress color="primary" /></Box>;
     if (!data) return <Typography color="error" align="center" mt={5}>Failed to load dashboard data. Please check your connection.</Typography>;
 
     // Calculations
     const efficiency = data.report.efficiency || '0%';
+    const effNum = parseInt(efficiency) || 0;
     const totalSec = data.report.totalTime || 0;
     const tasksToday = (data.tasks || []).filter(t => t.completed && t.timestamp && t.timestamp.startsWith(new Date().toISOString().split('T')[0])).length;
     const tasksPending = (data.tasks || []).filter(t => !t.completed).length;
@@ -121,6 +117,14 @@ const EmployeeDashboard = () => {
         }],
     };
 
+    const formatDuration = (seconds) => {
+        if (!seconds || seconds <= 0) return '0m';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+        return `${m}m`;
+    };
+
     return (
         <Box sx={{ py: 2 }}>
             <Box display="flex" justifyContent="space-between" alignItems="flex-end" mb={6}>
@@ -133,14 +137,6 @@ const EmployeeDashboard = () => {
                     </Typography>
                 </Box>
                 <Box display="flex" gap={2} alignItems="center">
-                    <Button
-                        variant="outlined"
-                        startIcon={<GetApp />}
-                        onClick={() => setReportModalOpen(true)}
-                        sx={{ fontWeight: 'bold', borderRadius: 2, height: 48 }}
-                    >
-                        Report
-                    </Button>
                     <Button
                         variant="contained"
                         color={isCheckedIn ? "error" : "primary"}
@@ -167,36 +163,64 @@ const EmployeeDashboard = () => {
                 </Box>
             </Box>
 
-            {/* Report Dialog */}
-            <Dialog open={reportModalOpen} onClose={() => setReportModalOpen(false)}>
-                <DialogTitle sx={{ fontWeight: 'bold' }}>Generate Custom Performance Report</DialogTitle>
+            {/* Away Justification Dialog */}
+            <Dialog open={awayReasonOpen} onClose={() => setAwayReasonOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ fontWeight: 'bold' }}>Pause Tracking / Clock Out</DialogTitle>
                 <DialogContent>
-                    <Box display="flex" gap={2} mt={2}>
+                    <Typography variant="body2" color="textSecondary" mb={2} mt={1}>
+                        Please provide a reason or justification for stepping away from the system.
+                    </Typography>
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel>Reason for Away Time</InputLabel>
+                        <Select
+                            value={awayReason}
+                            label="Reason for Away Time"
+                            onChange={(e) => setAwayReason(e.target.value)}
+                        >
+                            <MenuItem value="End of Day">End of Day (Clock Out)</MenuItem>
+                            <MenuItem value="Lunch Break">Lunch Break</MenuItem>
+                            <MenuItem value="Meeting (Offline)">Meeting (Offline)</MenuItem>
+                            <MenuItem value="Quick Break">Quick Break (15m)</MenuItem>
+                            <MenuItem value="Other">Other (Custom)</MenuItem>
+                        </Select>
+                    </FormControl>
+                    {awayReason === 'Other' && (
                         <TextField
-                            type="date"
-                            label="Start Date"
-                            InputLabelProps={{ shrink: true }}
                             fullWidth
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
+                            margin="normal"
+                            label="Please Specify"
+                            value={customReason}
+                            onChange={(e) => setCustomReason(e.target.value)}
+                            placeholder="e.g., Doctor appointment"
                         />
-                        <TextField
-                            type="date"
-                            label="End Date"
-                            InputLabelProps={{ shrink: true }}
-                            fullWidth
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                        />
-                    </Box>
+                    )}
                 </DialogContent>
                 <DialogActions sx={{ p: 3 }}>
-                    <Button onClick={() => setReportModalOpen(false)}>Cancel</Button>
-                    <Button variant="contained" onClick={handleDownloadPDF} disabled={!startDate || !endDate}>
-                        Download PDF
+                    <Button onClick={() => setAwayReasonOpen(false)}>Cancel</Button>
+                    <Button 
+                        variant="contained" 
+                        color="error"
+                        disabled={awayReason === 'Other' && !customReason.trim()}
+                        onClick={() => submitTimeLog('check-out', awayReason === 'Other' ? customReason : awayReason)}
+                    >
+                        Confirm Away
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Early Productivity Warnings */}
+            {totalSec > 3600 && effNum >= 50 && effNum <= 55 && (
+                <Alert severity="warning" sx={{ mb: 4, borderRadius: 2, border: '1px solid #ff9800', bgcolor: 'rgba(255, 152, 0, 0.05)' }}>
+                    <AlertTitle sx={{ fontWeight: 'bold' }}>Performance Warning</AlertTitle>
+                    Your productivity ({efficiency}) is dropping close to the 50% threshold. Please refocus on core tasks to avoid falling into the performance risk category.
+                </Alert>
+            )}
+            {totalSec > 3600 && effNum < 50 && (
+                <Alert severity="error" sx={{ mb: 4, borderRadius: 2, border: '1px solid #f44336', bgcolor: 'rgba(244, 67, 54, 0.05)' }}>
+                    <AlertTitle sx={{ fontWeight: 'bold' }}>Critical Performance Risk</AlertTitle>
+                    Your productivity ({efficiency}) has fallen below the 50% baseline. You have been flagged for review on the management dashboard. <strong>Supervisor visibility is active.</strong>
+                </Alert>
+            )}
 
             <Grid container spacing={3}>
                 {/* KPI Cards */}
@@ -220,7 +244,7 @@ const EmployeeDashboard = () => {
                 <Grid size={{ xs: 12, sm: 4 }}>
                     <Paper sx={{ p: 3, borderBottom: '6px solid #ffcc00', borderRadius: 2, height: '100%' }}>
                         <Typography variant="h6" color="textSecondary" gutterBottom>Work Hours</Typography>
-                        <Typography variant="h2" fontWeight="900">{(totalSec / 3600).toFixed(1)}h</Typography>
+                        <Typography variant="h2" fontWeight="900" sx={{ fontSize: { xs: '2rem', lg: '3.75rem' } }}>{formatDuration(totalSec)}</Typography>
                         <Typography variant="caption" color="textSecondary">Total logged this week</Typography>
                     </Paper>
                 </Grid>

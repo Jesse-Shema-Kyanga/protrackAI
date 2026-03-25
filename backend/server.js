@@ -72,6 +72,9 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/leave', require('./routes/leave'));
 app.use('/api/org', require('./routes/org'));
 
+// Serve uploaded documents statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // 3. Catch-all for unhandled /api routes
 app.use('/api', (req, res) => {
     console.log(`404 at API route: ${req.method} ${req.url}`);

@@ -1,10 +1,14 @@
 import { useState, useEffect, useContext } from 'react';
 import {
     Box, Paper, Typography, Tabs, Tab, Grid, TextField, Button, Card, CardContent,
-    Select, MenuItem, FormControl, InputLabel, List, ListItem, ListItemText
+    Select, MenuItem, FormControl, InputLabel, List, ListItem, ListItemText, Divider, Chip
 } from '@mui/material';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Feedback = () => {
     const { user } = useContext(AuthContext);
@@ -16,8 +20,26 @@ const Feedback = () => {
         hrComment: '', hrRating: 5
     });
     const [reviewingId, setReviewingId] = useState(null);
+    const [myStats, setMyStats] = useState(null);
+    const [myAttendance, setMyAttendance] = useState(null);
 
     const isSupervisor = user.role === 'supervisor' || user.role === 'hr';
+
+    // Chart logic
+    const prodSec = myStats?.productiveTime || 0;
+    const neutralSec = myStats?.neutralTime || 0;
+    const nonProdSec = myStats?.nonProductiveTime || 0;
+
+    const chartData = {
+        labels: ['Productive', 'Neutral', 'Non-Productive'],
+        datasets: [{
+            data: [prodSec, neutralSec, nonProdSec],
+            backgroundColor: ['#4caf50', '#333333', '#f44336'],
+            hoverOffset: 4,
+            borderWidth: 0,
+            cutout: '75%'
+        }],
+    };
 
     useEffect(() => {
         if (user) {
@@ -59,6 +81,15 @@ const Feedback = () => {
         try {
             const res = await axios.get(`/api/evals/${user.id}`);
             setFeedbackList(res.data);
+            
+            // Also fetch current stats to provide context for the evaluation (last 30 days)
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+            const [statsRes, timeRes] = await Promise.all([
+                axios.get(`/api/reports?userId=${user.id}`).catch(e => ({ data: null })),
+                axios.get(`/api/time?userId=${user.id}&startDate=${thirtyDaysAgo}`).catch(e => ({ data: { metrics: null } }))
+            ]);
+            setMyStats(statsRes.data);
+            setMyAttendance(timeRes.data.metrics);
         } catch (err) { console.error(err); }
     };
 
@@ -253,6 +284,54 @@ const Feedback = () => {
                     <Grid size={{ xs: 12, md: 6 }}>
                         <Paper sx={{ p: 4 }}>
                             <Typography variant="h6" mb={2}>Submit Self-Evaluation</Typography>
+                            
+                            {myStats && (
+                                <Paper elevation={0} sx={{ mb: 4, p: 3, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+                                    <Typography variant="h6" color="primary" fontWeight="bold" gutterBottom>
+                                        Your Performance Profile
+                                    </Typography>
+                                    <Typography variant="body2" color="textSecondary" mb={3}>
+                                        Review your current standing before submitting your evaluation.
+                                    </Typography>
+                                    
+                                    <Grid container spacing={4} alignItems="center">
+                                        <Grid size={{ xs: 12, sm: 5 }} sx={{ position: 'relative' }}>
+                                            <Doughnut data={chartData} options={{ maintainAspectRatio: true, plugins: { legend: { display: false } } }} />
+                                            <Box sx={{
+                                                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                                                textAlign: 'center', pointerEvents: 'none'
+                                            }}>
+                                                <Typography variant="h5" fontWeight="900" sx={{ color: '#4caf50' }}>{myStats.efficiency || '0%'}</Typography>
+                                                <Typography variant="caption" color="textSecondary">Productivity</Typography>
+                                            </Box>
+                                        </Grid>
+                                        
+                                        <Grid size={{ xs: 12, sm: 7 }}>
+                                            <Box display="flex" flexDirection="column" gap={2}>
+                                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                                    <Typography variant="body2" color="textSecondary" fontWeight="bold">Primary Tool:</Typography>
+                                                    <Chip size="small" label={myStats.domainBreakdown && myStats.domainBreakdown[0] ? myStats.domainBreakdown[0].domain : 'None'} sx={{ fontWeight: 'bold' }} />
+                                                </Box>
+                                                <Divider />
+                                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                                    <Typography variant="body2" color="textSecondary" fontWeight="bold">Attendance Integrity:</Typography>
+                                                    <Typography variant="body2" fontWeight="bold" color="primary.main">{myAttendance ? `${myAttendance.attendanceRate}%` : 'N/A'}</Typography>
+                                                </Box>
+                                                <Divider />
+                                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                                    <Typography variant="body2" color="textSecondary" fontWeight="bold">Lates / Absences:</Typography>
+                                                    <Box>
+                                                        <Typography component="span" variant="body2" color="warning.main" fontWeight="bold">{myAttendance ? myAttendance.late : 0}</Typography>
+                                                        <Typography component="span" variant="body2" mx={1}>/</Typography>
+                                                        <Typography component="span" variant="body2" color="error.main" fontWeight="bold">{myAttendance ? myAttendance.absent : 0}</Typography>
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        </Grid>
+                                    </Grid>
+                                </Paper>
+                            )}
+
                             <TextField
                                 label="Progress Assessment" multiline rows={4} fullWidth margin="normal"
                                 value={formData.assessment}

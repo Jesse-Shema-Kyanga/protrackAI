@@ -89,7 +89,12 @@ const aggregateByDomain = (activities) => {
         domainStats[domain].count += 1;
     });
 
-    return Object.values(domainStats).sort((a, b) => b.totalDuration - a.totalDuration);
+    const totalDuration = activities.reduce((s, a) => s + (a.duration || 0), 0);
+
+    return Object.values(domainStats).map(d => ({
+        ...d,
+        percent: totalDuration > 0 ? (d.totalDuration / totalDuration) * 100 : 0
+    })).sort((a, b) => b.totalDuration - a.totalDuration);
 };
 
 module.exports = {

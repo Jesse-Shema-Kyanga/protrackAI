@@ -81,7 +81,7 @@ router.get('/hr', async (req, res) => {
       .slice(0, 5)
       .map(a => ({
         name: formatName(a),
-        hours: Math.round(a.duration / 3600),
+        duration: a.duration,
         percent: totalDur > 0 ? Math.round((a.duration / totalDur) * 100) : 0
       }));
 
@@ -90,7 +90,7 @@ router.get('/hr', async (req, res) => {
       .slice(0, 5)
       .map(a => ({
         name: formatName(a),
-        hours: Math.round(a.duration / 3600),
+        duration: a.duration,
         percent: totalDur > 0 ? Math.round((a.duration / totalDur) * 100) : 0
       }));
 
@@ -112,6 +112,7 @@ router.get('/hr', async (req, res) => {
           name: '$_id',
           prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] },
           nonProdHours: { $round: [{ $divide: [{ $subtract: ['$total', '$prod'] }, 3600] }, 1] },
+          totalDuration: '$total',
           loggedHours: { $round: [{ $divide: ['$total', 3600] }, 1] },
           trend: { $literal: 0 }
         }
@@ -136,27 +137,48 @@ router.get('/hr', async (req, res) => {
         $project: {
           name: '$_id',
           prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] },
+          totalDuration: '$total',
           loggedHours: { $round: [{ $divide: ['$total', 3600] }, 1] }
         }
       },
       { $sort: { prod: -1 } }
     ]);
 
-    // ATTENDANCE CALCULATION
-    const today = new Date().toISOString().split('T')[0];
-    const timeLogs = await TimeLog.find({
-      userId: { $in: userIds },
-      timestamp: { $gte: startDate },
-      type: 'check-in'
-    });
-
-    const onTimeLogs = timeLogs.filter(log => {
-      const logTime = new Date(log.timestamp);
-      return logTime.getHours() < 9 || (logTime.getHours() === 9 && logTime.getMinutes() === 0);
-    });
-
     const attendanceRate = staffCount > 0 ? Math.round((new Set(timeLogs.map(l => l.userId)).size / staffCount) * 100) : 0;
     const onTimeRate = timeLogs.length > 0 ? Math.round((onTimeLogs.length / timeLogs.length) * 100) : 0;
+
+    // Identify underperforming workers across the organization
+    const underperforming = teamStats
+      .filter(t => t.prod < 50)
+      .map(t => ({ name: t.name, type: 'team', score: t.prod, reason: 'Low Team Efficiency' }));
+
+    // Also check individual employees if needed, but for HR, team/dept risks are usually more relevant.
+    // Let's add top 5 individual risks too.
+    const individualActivities = await Activity.aggregate([
+      { $match: activityMatch },
+      {
+        $group: {
+          _id: '$userId',
+          total: { $sum: '$duration' },
+          prod: { $sum: { $cond: [{ $eq: ['$classified', 'productive'] }, '$duration', 0] } }
+        }
+      },
+      {
+        $project: {
+          userId: '$_id',
+          prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] },
+          total: '$total'
+        }
+      },
+      { $match: { prod: { $lt: 50 }, total: { $gt: 3600 } } }, // Only if they have > 1h activity
+      { $sort: { prod: 1 } },
+      { $limit: 10 }
+    ]);
+
+    const userRisks = await Promise.all(individualActivities.map(async (a) => {
+      const u = await User.findOne({ id: a.userId }).select('name dept team');
+      return { name: u?.name || a.userId, dept: u?.dept, team: u?.team, score: a.prod, type: 'individual' };
+    }));
 
     res.json({
       prodRatio,
@@ -166,7 +188,8 @@ router.get('/hr', async (req, res) => {
       topProductive,
       topNonProductive,
       departments: deptStats,
-      teams: teamStats
+      teams: teamStats,
+      underperforming: userRisks
     });
 
   } catch (err) {
@@ -355,17 +378,28 @@ router.get('/supervisor', async (req, res) => {
       alerts.push(`Overdue: "${t.title}" by ${userName}`);
     });
 
+    // Add Underperforming alerts
+    const underperforming = userProd.filter(p => p.productivity < 50);
+    underperforming.forEach(p => {
+      const act = currentActivities.find(a => a._id === p.userId);
+      if (act && act.totalDuration > 3600) { // Only alert if > 1h logged
+          alerts.push(`Critical Performance Risk: ${p.name} (${p.productivity}% productivity)`);
+      }
+    });
+
     res.json({
       productivity: avgProductivity,
       productivityTrend,
       taskCompletion,
       taskTrend,
       totalHours,
+      totalSeconds,
       openTasks,
       topPerformer: { name: topPerformer.name, prod: topPerformer.productivity },
       atRisk: { name: atRisk.name, prod: atRisk.productivity },
-      alerts: alerts.slice(0, 5),
-      userProd
+      alerts: alerts.slice(0, 8),
+      userProd,
+      underperforming
     });
 
   } catch (err) {

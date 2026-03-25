@@ -19,6 +19,7 @@ const ActivityAnalytics = () => {
     const [employees, setEmployees] = useState([]);
     const [selectedUserId, setSelectedUserId] = useState(user.id);
     const [period, setPeriod] = useState('month');
+    const [reportType, setReportType] = useState('all');
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
 
@@ -27,8 +28,7 @@ const ActivityAnalytics = () => {
             const fetchEmployees = async () => {
                 const res = await axios.get(`/api/users?role=employee`);
                 setEmployees(res.data);
-                // If we have employees, maybe select the first one by default if we haven't selected any
-                if (res.data.length > 0 && selectedUserId === user.id) {
+                if (res.data.length > 0) {
                     setSelectedUserId(res.data[0].id);
                 }
             };
@@ -98,7 +98,7 @@ const ActivityAnalytics = () => {
                         const value = context.parsed.y || 0;
                         const totalActiveMins = hours.reduce((a, b) => a + b, 0);
                         const percentage = totalActiveMins > 0 ? Math.round((value / totalActiveMins) * 100) : 0;
-                        return `${value.toFixed(1)}m (${percentage}% of total day)`;
+                        return `${Math.round(value)}m (${percentage}% of total day)`;
                     }
                 }
             }
@@ -214,6 +214,14 @@ const ActivityAnalytics = () => {
         maintainAspectRatio: false
     };
 
+    const formatDuration = (seconds) => {
+        if (!seconds || seconds <= 0) return '0m';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+        return `${m}m`;
+    };
+
     return (
         <Grid container spacing={3}>
             <Grid size={{ xs: 12 }}>
@@ -229,7 +237,6 @@ const ActivityAnalytics = () => {
                                     onChange={(e) => setSelectedUserId(e.target.value)}
                                     sx={{ bgcolor: 'background.paper', borderRadius: 2 }}
                                 >
-                                    <MenuItem value={user.id}><em>My Own Stats</em></MenuItem>
                                     {employees.map(emp => (
                                         <MenuItem key={emp.id} value={emp.id}>{emp.name} ({emp.id})</MenuItem>
                                     ))}
@@ -250,6 +257,21 @@ const ActivityAnalytics = () => {
                                 <MenuItem value="custom">Custom Range</MenuItem>
                             </Select>
                         </FormControl>
+                        {user.role === 'supervisor' && (
+                            <FormControl size="small" sx={{ mt: 1, ml: 1, minWidth: 150 }}>
+                                <InputLabel>Report Type</InputLabel>
+                                <Select
+                                    value={reportType}
+                                    label="Report Type"
+                                    onChange={(e) => setReportType(e.target.value)}
+                                    sx={{ bgcolor: 'background.paper', borderRadius: 2 }}
+                                >
+                                    <MenuItem value="all">Full Report</MenuItem>
+                                    <MenuItem value="attendance">Attendance</MenuItem>
+                                    <MenuItem value="productivity">Productivity</MenuItem>
+                                </Select>
+                            </FormControl>
+                        )}
                         {period === 'custom' && (
                             <Box display="flex" gap={1} mt={1}>
                                 <TextField
@@ -281,9 +303,9 @@ const ActivityAnalytics = () => {
                                 color="secondary"
                                 onClick={async () => {
                                     try {
-                                        let urlParams = `period=${period}`;
+                                        let urlParams = `period=${period}&reportType=${reportType}`;
                                         if (period === 'custom' && startDate && endDate) {
-                                            urlParams = `start=${startDate}&end=${endDate}`;
+                                            urlParams = `start=${startDate}&end=${endDate}&reportType=${reportType}`;
                                         }
                                         const response = await axios.get(`/api/reports/team-pdf?${urlParams}`, {
                                             responseType: 'blob'
@@ -310,9 +332,9 @@ const ActivityAnalytics = () => {
                             variant="contained"
                             onClick={async () => {
                                 try {
-                                    let urlParams = `userId=${selectedUserId}&period=${period}`;
+                                    let urlParams = `userId=${selectedUserId}&period=${period}&reportType=${reportType}`;
                                     if (period === 'custom' && startDate && endDate) {
-                                        urlParams = `userId=${selectedUserId}&start=${startDate}&end=${endDate}`;
+                                        urlParams = `userId=${selectedUserId}&start=${startDate}&end=${endDate}&reportType=${reportType}`;
                                     }
                                     const response = await axios.get(`/api/reports/pdf?${urlParams}`, {
                                         responseType: 'blob'

@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import {
-    Grid, Paper, Typography, Box, Select, MenuItem, FormControl, Button,
+    Grid, Paper, Typography, Box, Select, MenuItem, FormControl, Button, InputLabel,
     List, ListItem, ListItemText, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Chip, CircularProgress
 } from '@mui/material';
@@ -20,6 +20,7 @@ const WorkforceAnalytics = () => {
     const [viewMode, setViewMode] = useState('department'); // 'department' or 'team'
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [reportType, setReportType] = useState('all');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -46,6 +47,14 @@ const WorkforceAnalytics = () => {
 
     const displayData = viewMode === 'department' ? (analytics.departments || []) : (analytics.teams || []);
 
+    const formatDuration = (seconds) => {
+        if (!seconds || seconds <= 0) return '0m';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+        return `${m}m`;
+    };
+
     return (
         <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={6}>
@@ -54,8 +63,10 @@ const WorkforceAnalytics = () => {
                 </Typography>
                 <Box display="flex" gap={2}>
                     <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel>View Mode</InputLabel>
                         <Select
                             value={viewMode}
+                            label="View Mode"
                             onChange={(e) => setViewMode(e.target.value)}
                             sx={{ borderRadius: 2, bgcolor: 'background.paper', fontWeight: 'bold' }}
                         >
@@ -64,8 +75,10 @@ const WorkforceAnalytics = () => {
                         </Select>
                     </FormControl>
                     <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel>Period</InputLabel>
                         <Select
                             value={period}
+                            label="Period"
                             onChange={(e) => setPeriod(e.target.value)}
                             sx={{ borderRadius: 2, bgcolor: 'background.paper', fontWeight: 'bold' }}
                         >
@@ -74,6 +87,45 @@ const WorkforceAnalytics = () => {
                             <MenuItem value="quarter">This Quarter</MenuItem>
                         </Select>
                     </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel>Report Type</InputLabel>
+                        <Select
+                            value={reportType}
+                            label="Report Type"
+                            onChange={(e) => setReportType(e.target.value)}
+                            sx={{ borderRadius: 2, bgcolor: 'background.paper', fontWeight: 'bold' }}
+                        >
+                            <MenuItem value="all">Full Report</MenuItem>
+                            <MenuItem value="attendance">Attendance</MenuItem>
+                            <MenuItem value="productivity">Productivity</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<Assessment />}
+                        onClick={async () => {
+                            try {
+                                const response = await axios.get(`/api/reports/hr-pdf?period=${period}&reportType=${reportType}`, {
+                                    responseType: 'blob'
+                                });
+                                const url = window.URL.createObjectURL(new Blob([response.data]));
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', `HR_Audit_${period}_${reportType}.pdf`);
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                window.URL.revokeObjectURL(url);
+                            } catch (err) {
+                                console.error("HR PDF Download Error:", err);
+                                alert("Failed to generate HR Audit Report.");
+                            }
+                        }}
+                        sx={{ borderRadius: 2, fontWeight: 'bold', px: 3 }}
+                    >
+                        HR Audit PDF
+                    </Button>
                 </Box>
             </Box>
 
@@ -92,7 +144,7 @@ const WorkforceAnalytics = () => {
                                 <ListItem key={i} divider={i !== analytics.topProductive.length - 1} sx={{ px: 0 }}>
                                     <ListItemText
                                         primary={app.name}
-                                        secondary={`Standard Operational Tool - ${app.hours}h Logged`}
+                                        secondary={`Standard Operational Tool - ${formatDuration(app.duration)} Logged`}
                                         primaryTypographyProps={{ fontWeight: 'bold' }}
                                     />
                                     <Typography variant="h6" fontWeight="950" color="success.main">{app.percent}%</Typography>
@@ -114,7 +166,7 @@ const WorkforceAnalytics = () => {
                                 <ListItem key={i} divider={i !== analytics.topNonProductive.length - 1} sx={{ px: 0 }}>
                                     <ListItemText
                                         primary={app.name}
-                                        secondary={`Non-Core Activity - ${app.hours}h Exposure`}
+                                        secondary={`Non-Core Activity - ${formatDuration(app.duration)} Exposure`}
                                         primaryTypographyProps={{ fontWeight: 'bold', color: 'error.main' }}
                                     />
                                     <Typography variant="h6" fontWeight="950" color="error.main">{app.percent}%</Typography>
@@ -124,6 +176,36 @@ const WorkforceAnalytics = () => {
                     </Paper>
                 </Grid>
             </Grid>
+
+            {/* Performance Risk Roster */}
+            {analytics.underperforming?.length > 0 && (
+                <Paper sx={{ p: 4, borderRadius: 3, mb: 6, borderTop: '6px solid #f44336' }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                        <Typography variant="h5" fontWeight="950">
+                            Workforce <Box component="span" color="error.main">Integrity</Box> Risk Roster (Under 50% Efficiency)
+                        </Typography>
+                        <Chip label={`${analytics.underperforming.length} EMPLOYEES AT RISK`} color="error" sx={{ fontWeight: 'bold' }} />
+                    </Box>
+                    <Grid container spacing={2}>
+                        {analytics.underperforming.map((risk, i) => (
+                            <Grid item xs={12} sm={6} md={3} key={i}>
+                                <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}>
+                                    <Typography variant="subtitle2" fontWeight="bold">{risk.name}</Typography>
+                                    <Typography variant="caption" color="textSecondary" display="block">
+                                        {risk.dept} | {risk.team}
+                                    </Typography>
+                                    <Box display="flex" alignItems="center" gap={1} mt={1}>
+                                        <Box sx={{ flex: 1, height: 4, bgcolor: 'background.paper', borderRadius: 2 }}>
+                                            <Box sx={{ width: `${risk.score}%`, height: '100%', bgcolor: 'error.main', borderRadius: 2 }} />
+                                        </Box>
+                                        <Typography variant="caption" fontWeight="bold" color="error.main">{risk.score}%</Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Paper>
+            )}
 
             {/* Drilldown Table */}
             <Paper sx={{ p: 4, borderRadius: 3, overflow: 'hidden', borderTop: '6px solid #ffcc00' }}>
@@ -162,7 +244,7 @@ const WorkforceAnalytics = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell align="center" sx={{ fontWeight: '700' }}>
-                                        {item.loggedHours}h
+                                        {formatDuration(item.totalDuration || item.loggedHours * 3600)}
                                         {viewMode === 'department' && <Typography variant="caption" display="block" color="textSecondary">Aggregated</Typography>}
                                     </TableCell>
                                     <TableCell align="center">

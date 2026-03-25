@@ -3,19 +3,46 @@ const router = express.Router();
 const Leave = require('../models/Leave');
 const Notification = require('../models/Notification');
 const { authMiddleware } = require('../middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configure Multer for local storage
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, '../uploads/leaves');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
 
 router.use(authMiddleware);
 
-// Request Leave (Employee)
-router.post('/', async (req, res) => {
+// Request Leave (Employee) - Now supports file uploads
+router.post('/', upload.single('proofDocument'), async (req, res) => {
     try {
         const { type, startDate, endDate, reason } = req.body;
+        
+        let proofDocumentPath = null;
+        if (req.file) {
+            // Store the relative path to be served statically
+            proofDocumentPath = `/uploads/leaves/${req.file.filename}`;
+        }
+
         const leave = new Leave({
             userId: req.user.userId,
             type,
             startDate: new Date(startDate),
             endDate: new Date(endDate),
             reason,
+            proofDocument: proofDocumentPath,
             status: 'pending'
         });
         await leave.save();

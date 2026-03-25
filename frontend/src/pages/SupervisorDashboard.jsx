@@ -62,29 +62,6 @@ const SupervisorDashboard = () => {
         fetchData();
     }, [user, period, startDate, endDate]);
 
-    const handleDownloadTeamPDF = async () => {
-        try {
-            let urlParams = `period=${period}`;
-            if (period === 'custom' && startDate && endDate) {
-                urlParams = `start=${startDate}&end=${endDate}`;
-            }
-            const response = await axios.get(`/api/reports/team-pdf?${urlParams}`, {
-                responseType: 'blob'
-            });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `MTN_Team_Executive_Audit_${user.team}_${period}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error("PDF Download Error:", err);
-            alert("Failed to generate team report.");
-        }
-    };
-
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}><CircularProgress color="primary" /></Box>;
     if (!analytics) return <Typography color="error" align="center" mt={5}>No team data available. Consult HR to join a team.</Typography>;
 
@@ -117,6 +94,14 @@ const SupervisorDashboard = () => {
             y: { beginAtZero: true, max: 100 }
         },
         maintainAspectRatio: false
+    };
+
+    const formatDuration = (seconds) => {
+        if (!seconds || seconds <= 0) return '0m';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+        return `${m}m`;
     };
 
     return (
@@ -163,15 +148,6 @@ const SupervisorDashboard = () => {
                             />
                         </Box>
                     )}
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<GetApp />}
-                        sx={{ borderRadius: 2, px: 3, fontWeight: 'bold' }}
-                        onClick={handleDownloadTeamPDF}
-                    >
-                        Export
-                    </Button>
                 </Box>
             </Box>
 
@@ -195,7 +171,9 @@ const SupervisorDashboard = () => {
                             <Typography variant="overline" fontWeight="bold">Total Hours</Typography>
                             <AccessTime color="inherit" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics.totalHours}</Typography>
+                        <Typography variant="h3" fontWeight="950" sx={{ fontSize: { xs: '2rem', lg: '3rem' } }}>
+                            {formatDuration(analytics.totalSeconds || analytics.totalHours * 3600)}
+                        </Typography>
                         <Typography variant="caption" color="textSecondary">Cumulative Team Output</Typography>
                     </Paper>
                 </Grid>
@@ -246,6 +224,24 @@ const SupervisorDashboard = () => {
                             </Box>
                         </Box>
                     </Paper>
+
+                    {analytics.underperforming?.length > 0 && (
+                        <Paper sx={{ p: 3, borderRadius: 3, border: '2px solid #f44336', mb: 3, bgcolor: 'rgba(244, 67, 54, 0.05)' }}>
+                            <Typography variant="overline" fontWeight="bold" color="error.main">Performance Risk</Typography>
+                            <List dense sx={{ mt: 1 }}>
+                                {analytics.underperforming.map((p, i) => (
+                                    <ListItem key={i} sx={{ px: 0 }}>
+                                        <ListItemText 
+                                            primary={p.name} 
+                                            secondary={`${p.productivity}% Efficiency - Status: Risk`}
+                                            primaryTypographyProps={{ fontWeight: 'bold' }}
+                                        />
+                                        <Chip label="LOW" size="small" color="error" sx={{ fontWeight: 'bold', fontSize: '0.65rem' }} />
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </Paper>
+                    )}
 
                     <Paper sx={{ p: 3, borderRadius: 3 }}>
                         <Typography variant="h6" fontWeight="950" gutterBottom>Critical Operations Alerts</Typography>

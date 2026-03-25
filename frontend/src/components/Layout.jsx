@@ -43,18 +43,16 @@ const Layout = () => {
             { text: 'Dashboard', icon: <Dashboard />, path: '/supervisor-dashboard' },
             { text: 'Tasks', icon: <Assignment />, path: '/tasks' },
             { text: 'Goals', icon: <Flag />, path: '/goals' },
-            { text: 'Attendance', icon: <AccessTime />, path: '/time' },
             { text: 'Evaluations', icon: <Assessment />, path: '/feedback' },
             { text: 'AI Manager', icon: <Psychology />, path: '/ai-management' },
-            { text: 'Analytics', icon: <Assessment />, path: '/analytics' },
+            { text: 'Reports & Analytics', icon: <Assessment />, path: '/analytics' },
             { text: 'Leave Management', icon: <DateRange />, path: '/leave' },
         ],
         hr: [
             { text: 'Dashboard', icon: <Dashboard />, path: '/hr-dashboard' },
-            { text: 'Workforce', icon: <Assessment />, path: '/hr-analytics' },
+            { text: 'Reports & Analytics', icon: <Assessment />, path: '/hr-analytics' },
             { text: 'Reviews', icon: <Assignment />, path: '/feedback' },
             { text: 'AI Manager', icon: <Psychology />, path: '/ai-management' },
-            { text: 'Attendance', icon: <AccessTime />, path: '/time' },
             { text: 'Leaves', icon: <DateRange />, path: '/leave' },
         ]
     };
@@ -292,10 +290,10 @@ const Layout = () => {
                     }}
                 >
                     <Typography variant="body2" color="textSecondary" align="center">
-                        © 2025 ProTrackAI - Intelligent Employee Productivity Management System
+                        © 2026 ProTrackAI - Intelligent Employee Productivity Management System
                     </Typography>
                     <Typography variant="caption" color="textSecondary" align="center" sx={{ opacity: 0.7 }}>
-                        MTN Rwanda | Powered by AI
+                        MTN Rwanda
                     </Typography>
                 </Box>
             </Box>

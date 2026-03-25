@@ -203,9 +203,9 @@ const getAttendance = async (req, res) => {
     }, 0);
 
     const metrics = {
-      present: totalPotentialSlots > 0 ? Math.min(100, Math.round((present / totalPotentialSlots) * 100)) : 0,
-      late: totalPotentialSlots > 0 ? Math.min(100, Math.round((late / totalPotentialSlots) * 100)) : 0,
-      absent: totalPotentialSlots > 0 ? Math.min(100, Math.round((absent / totalPotentialSlots) * 100)) : 0,
+      present,
+      late,
+      absent,
       attendanceRate: totalPotentialSlots > 0 ? Math.min(100, Math.round(((present + late) / totalPotentialSlots) * 100)) : 0,
       lateRate: totalPotentialSlots > 0 ? Math.min(100, Math.round((late / totalPotentialSlots) * 100)) : 0,
       monthlyAbsences: monthlyAbsenceNotifs,
@@ -275,7 +275,7 @@ router.get('/attendance', getAttendance);
 
 router.post('/log-time', async (req, res) => {
   try {
-    const { userId, type, status } = req.body;
+    const { userId, type, status, reason } = req.body;
     if (!userId || !type) return res.status(400).json({ error: 'Missing userId or type' });
 
     let finalStatus = status;
@@ -308,7 +308,7 @@ router.post('/log-time', async (req, res) => {
       }
     }
 
-    const newLog = new TimeLog({ userId, type, status: finalStatus });
+    const newLog = new TimeLog({ userId, type, status: finalStatus, reason });
     await newLog.save();
     res.json({ message: 'Time logged!', log: newLog });
   } catch (err) {

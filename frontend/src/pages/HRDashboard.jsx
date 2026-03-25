@@ -54,29 +54,6 @@ const HRDashboard = () => {
         fetchData();
     }, [user, period, startDate, endDate]);
 
-    const handleDownloadPDF = async () => {
-        try {
-            let urlParams = `period=${period}`;
-            if (period === 'custom' && startDate && endDate) {
-                urlParams = `start=${startDate}&end=${endDate}`;
-            }
-            const response = await axios.get(`/api/reports/hr-pdf?${urlParams}`, {
-                responseType: 'blob'
-            });
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `MTN_Executive_Audit_Report_${period}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error("PDF Download Error:", err);
-            alert("Failed to generate report.");
-        }
-    };
-
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}><CircularProgress color="primary" /></Box>;
     if (!analytics || !evals) return <Typography color="error" align="center" mt={5}>No workforce data available. Please check your connection.</Typography>;
 
@@ -137,15 +114,6 @@ const HRDashboard = () => {
                         onClick={() => navigate('/org-management')}
                     >
                         Architecture
-                    </Button>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<GetApp />}
-                        sx={{ borderRadius: 2, px: 3, fontWeight: 'bold' }}
-                        onClick={handleDownloadPDF}
-                    >
-                        Report
                     </Button>
                 </Box>
             </Box>
