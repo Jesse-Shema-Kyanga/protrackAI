@@ -199,19 +199,41 @@ router.get('/hr', async (req, res) => {
     const onTimeLogs = checkInLogs.filter(l => l.status === 'present');
     const onTimeRate = uniqueOrgEvents.size > 0 ? Math.round((onTimeLogs.length / uniqueOrgEvents.size) * 100) : 0;
 
-    // Risks
-    const individualAgg = await Activity.aggregate([
-      { $match: activityMatch },
-      { $group: { _id: '$userId', total: { $sum: '$duration' }, prod: { $sum: { $cond: [{ $eq: ['$classified', 'productive'] }, '$duration', 0] } } } },
-      { $project: { userId: '$_id', prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] }, total: '$total' } },
-      { $match: { prod: { $lt: 50 }, total: { $gt: 3600 } } },
-      { $sort: { prod: 1 } }, { $limit: 10 }
-    ]);
+    // Risks (Only populated for periods > today to prevent daily flukes)
+    let userRisks = [];
+    if (period !== 'today') {
+      const riskMap = targetUsers.map(u => {
+        // Productivity check for this user
+        const uActs = activities.filter(a => a.userId === u.id);
+        const uTotal = uActs.reduce((s, a) => s + (a.duration || 0), 0);
+        const uProdDur = uActs.filter(a => a.classified === 'productive').reduce((s, a) => s + (a.duration || 0), 0);
+        const prodScore = uTotal > 3600 ? Math.round((uProdDur / uTotal) * 100) : 100;
 
-    const userRisks = await Promise.all(individualAgg.map(async (a) => {
-      const u = targetUsers.find(user => user.id === a.userId);
-      return { userId: a.userId, name: u?.name || a.userId, dept: u?.dept, team: u?.team, score: a.prod, type: 'individual' };
-    }));
+        // Attendance check for this user
+        const uLogs = checkInLogs.filter(l => l.userId === u.id);
+        const uEvents = new Set(uLogs.map(l => l.timestamp ? l.timestamp.toISOString().split('T')[0] : null).filter(Boolean));
+        let uPoints = 0;
+        uEvents.forEach(key => {
+          const log = uLogs.find(l => l.timestamp && l.timestamp.toISOString().split('T')[0] === key);
+          if (log && log.status === 'present') uPoints += 100;
+          else if (log && log.status === 'late') uPoints += 70;
+        });
+        const attScore = adjustedOrgExpected > 0 ? Math.min(100, Math.round(uPoints / adjustedOrgExpected)) : 100;
+
+        let riskType = null;
+        let finalScore = 0;
+        
+        if (prodScore < 50) { riskType = 'productivity'; finalScore = prodScore; }
+        else if (attScore < 50) { riskType = 'attendance'; finalScore = attScore; }
+
+        if (riskType) {
+          return { userId: u.id, name: u.name, dept: u.dept, team: u.team, score: finalScore, type: riskType };
+        }
+        return null;
+      }).filter(Boolean);
+      
+      userRisks = riskMap.sort((a,b) => a.score - b.score).slice(0, 10);
+    }
 
     res.json({
       prodRatio,
@@ -351,12 +373,35 @@ router.get('/supervisor', async (req, res) => {
     const userProd = await Promise.all(currentActivities.map(async (a) => {
       const u = teamUsers.find(user => user.id === a._id);
       const lastLog = await TimeLog.findOne({ userId: a._id }).sort({ timestamp: -1 });
+
+      // Calculate attendance rate for this user
+      const uLogs = checkInLogs.filter(l => l.userId === a._id);
+      const uEvents = new Set(uLogs.map(l => l.timestamp ? l.timestamp.toISOString().split('T')[0] : null).filter(Boolean));
+      let uPoints = 0;
+      uEvents.forEach(key => {
+          const log = uLogs.find(l => l.timestamp && l.timestamp.toISOString().split('T')[0] === key);
+          if (log && log.status === 'present') uPoints += 100;
+          else if (log && log.status === 'late') uPoints += 70;
+      });
+      // User expected days (periodWorkingDays - their approved leave days)
+      const uLeaves = teamLeaves.filter(l => l.userId === a._id);
+      let overlapDays = 0;
+      uLeaves.forEach(leave => {
+          const overlapStart = new Date(Math.max(new Date(leave.startDate), startDate));
+          const overlapEnd = new Date(Math.min(new Date(leave.endDate), now));
+          if (overlapStart <= overlapEnd) overlapDays += Math.max(0, getWorkingDays(overlapStart, overlapEnd));
+      });
+      const expected = Math.max(1, periodWorkingDays - overlapDays);
+      const attRate = Math.min(100, Math.round(uPoints / expected));
+
       return {
         userId: a._id,
         name: u?.name || 'Unknown',
         productivity: a.totalDuration > 0 ? Math.round((a.prodDuration / a.totalDuration) * 100) : 0,
+        attendance: uEvents.size === 0 && expected === 1 ? 100 : attRate, // If they have no logs but expected=1 (today just started), default to 100
         liveStatus: lastLog?.type || 'check-out',
-        lastCheckOutReason: lastLog?.type === 'check-out' ? (lastLog?.reason || 'Reason not provided') : 'Active'
+        lastCheckOutReason: lastLog?.type === 'check-out' ? (lastLog?.reason || 'Reason not provided') : 'Active',
+        totalDuration: a.totalDuration
       };
     }));
 
@@ -456,14 +501,30 @@ router.get('/supervisor', async (req, res) => {
       alerts.push(`Overdue: "${t.title}" by ${userName}`);
     });
 
-    // Add Underperforming alerts
-    const underperforming = userProd.filter(p => p.productivity < 50);
-    underperforming.forEach(p => {
-      const act = currentActivities.find(a => a._id === p.userId);
-      if (act && act.totalDuration > 3600) { // Only alert if > 1h logged
-          alerts.push(`Critical Performance Risk: ${p.name} (${p.productivity}% productivity)`);
-      }
-    });
+    // Add Underperforming alerts & export array
+    let underperformingArray = [];
+    if (period !== 'today') {
+      userProd.forEach(p => {
+        let rType = null;
+        let pScore = 0;
+        
+        // Triggers: Productivity < 50% (and active) OR Attendance < 50%
+        if (p.productivity < 50 && p.totalDuration > 3600) { rType = 'productivity'; pScore = p.productivity; }
+        else if (p.attendance < 50) { rType = 'attendance'; pScore = p.attendance; }
+        
+        if (rType) {
+            underperformingArray.push({
+                userId: p.userId,
+                name: p.name,
+                dept: team,
+                team: team,
+                score: pScore,
+                type: rType
+            });
+            alerts.push(`Critical Risk: ${p.name} (${pScore}% ${rType})`);
+        }
+      });
+    }
 
     res.json({
       productivity: avgProductivity,
@@ -478,7 +539,7 @@ router.get('/supervisor', async (req, res) => {
       atRisk: { name: atRisk.name, prod: atRisk.productivity },
       alerts: alerts.slice(0, 8),
       userProd,
-      underperforming
+      underperforming: underperformingArray.sort((a,b) => a.score - b.score).slice(0, 10)
     });
 
   } catch (err) {

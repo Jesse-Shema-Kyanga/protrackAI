@@ -313,18 +313,30 @@ const SupervisorDashboard = () => {
                     {analytics.underperforming?.length > 0 && (
                         <Paper sx={{ p: 3, borderRadius: 3, border: '2px solid #f44336', mb: 3, bgcolor: 'rgba(244, 67, 54, 0.05)' }}>
                             <Typography variant="overline" fontWeight="bold" color="error.main">Performance Risk</Typography>
-                            <List dense sx={{ mt: 1 }}>
+                            <Box sx={{ mt: 2 }}>
                                 {analytics.underperforming.map((p, i) => (
-                                    <ListItem key={i} sx={{ px: 0 }}>
-                                        <ListItemText 
-                                            primary={p.name} 
-                                            secondary={`${p.productivity}% Efficiency - Status: Risk`}
-                                            primaryTypographyProps={{ fontWeight: 'bold' }}
-                                        />
-                                        <Chip label="LOW" size="small" color="error" sx={{ fontWeight: 'bold', fontSize: '0.65rem' }} />
-                                    </ListItem>
+                                    <Box
+                                        key={i}
+                                        onClick={() => window.location.href = `/employee-risk/${p.userId || p.name}`}
+                                        sx={{
+                                            p: 1.5, mb: 1, borderRadius: 2, bgcolor: 'background.paper',
+                                            border: '1px solid', borderColor: 'error.light',
+                                            cursor: 'pointer', transition: 'all 0.2s',
+                                            '&:hover': { bgcolor: 'error.main', color: '#fff', '& *': { color: '#fff !important' } }
+                                        }}
+                                    >
+                                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                                            <Typography variant="subtitle2" fontWeight="bold">{p.name}</Typography>
+                                            <Typography variant="caption" fontWeight="bold" color="error.main">
+                                                {p.score}% {p.type === 'attendance' ? 'ATT' : 'PROD'}
+                                            </Typography>
+                                        </Box>
+                                        <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                                            Critical {p.type === 'attendance' ? 'Attendance' : 'Productivity'} drop — Click to drilldown →
+                                        </Typography>
+                                    </Box>
                                 ))}
-                            </List>
+                            </Box>
                         </Paper>
                     )}
 

@@ -210,9 +210,13 @@ const WorkforceAnalytics = () => {
                                         <Box sx={{ flex: 1, height: 4, bgcolor: 'background.paper', borderRadius: 2 }}>
                                             <Box sx={{ width: `${risk.score}%`, height: '100%', bgcolor: 'error.main', borderRadius: 2 }} />
                                         </Box>
-                                        <Typography variant="caption" fontWeight="bold" color="error.main">{risk.score}%</Typography>
+                                        <Typography variant="caption" fontWeight="bold" color="error.main">
+                                            {risk.score}% {risk.type === 'attendance' ? 'ATT' : 'PROD'}
+                                        </Typography>
                                     </Box>
-                                    <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.6 }}>Click to view profile →</Typography>
+                                    <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.6 }}>
+                                        Critical {risk.type === 'attendance' ? 'Attendance' : 'Productivity'} Drop →
+                                    </Typography>
                                 </Box>
                             </Grid>
                         ))}
