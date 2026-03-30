@@ -100,6 +100,8 @@ const EmployeeDashboard = () => {
     const totalSec = data.report.totalTime || 0;
     const tasksToday = (data.tasks || []).filter(t => t.completed && t.timestamp && t.timestamp.startsWith(new Date().toISOString().split('T')[0])).length;
     const tasksPending = (data.tasks || []).filter(t => !t.completed).length;
+    const attendanceRate = data.attendance?.metrics?.attendanceRate || 0;
+    const reliabilityScore = data.attendance?.metrics?.attendanceRate || 0; // Merged as per abstraction
 
     // Productivity Pie Chart
     const prodSec = data?.report?.productiveTime || 0;
@@ -155,7 +157,7 @@ const EmployeeDashboard = () => {
                         {actionLoading ? <CircularProgress size={24} color="inherit" /> : (isCheckedIn ? "Clock Out" : "Clock In")}
                     </Button>
                     <Chip
-                        label={isCheckedIn ? "Live Tracking Active" : "Tracking Paused"}
+                        label={isCheckedIn ? "Live Tracking Active" : `Paused: ${data.attendance?.lastReason || 'Off-duty'}`}
                         color={isCheckedIn ? "success" : "default"}
                         variant="outlined"
                         sx={{ fontWeight: 'bold', borderRadius: 2, borderStyle: 'dashed' }}
@@ -180,6 +182,8 @@ const EmployeeDashboard = () => {
                             <MenuItem value="End of Day">End of Day (Clock Out)</MenuItem>
                             <MenuItem value="Lunch Break">Lunch Break</MenuItem>
                             <MenuItem value="Meeting (Offline)">Meeting (Offline)</MenuItem>
+                            <MenuItem value="Site Visit">Site Visit / Client Meeting</MenuItem>
+                            <MenuItem value="Field Work">Field Work / Technical Assignment</MenuItem>
                             <MenuItem value="Quick Break">Quick Break (15m)</MenuItem>
                             <MenuItem value="Other">Other (Custom)</MenuItem>
                         </Select>
@@ -224,16 +228,25 @@ const EmployeeDashboard = () => {
 
             <Grid container spacing={3}>
                 {/* KPI Cards */}
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 3, borderBottom: '6px solid #ffcc00', borderRadius: 2, height: '100%' }}>
                         <Typography variant="h6" color="textSecondary" gutterBottom>Productivity Score</Typography>
                         <Typography variant="h2" fontWeight="900" color="primary">{efficiency}</Typography>
                         <Typography variant="caption" color="textSecondary">Daily performance score</Typography>
                     </Paper>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 3, borderBottom: '6px solid #000', borderRadius: 2, height: '100%' }}>
-                        <Typography variant="h6" color="textSecondary" gutterBottom>Daily Target</Typography>
+                        <Typography variant="h6" color="textSecondary" gutterBottom>Attendance</Typography>
+                        <Typography variant="h3" fontWeight="950" color={attendanceRate >= 90 ? 'success.main' : attendanceRate >= 75 ? 'warning.main' : 'error.main'}>
+                            {attendanceRate}%
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">Punctuality-Weighted Score</Typography>
+                    </Paper>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Paper sx={{ p: 3, borderBottom: '6px solid #ffcc00', borderRadius: 2, height: '100%' }}>
+                        <Typography variant="h6" color="textSecondary" gutterBottom>Task Completion</Typography>
                         <Box display="flex" alignItems="baseline" gap={1}>
                             <Typography variant="h2" fontWeight="900">{tasksToday}</Typography>
                             <Typography variant="h5" color="textSecondary">/ {tasksToday + tasksPending}</Typography>
@@ -241,8 +254,8 @@ const EmployeeDashboard = () => {
                         <Typography variant="caption" color="textSecondary">Tasks completed today</Typography>
                     </Paper>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
-                    <Paper sx={{ p: 3, borderBottom: '6px solid #ffcc00', borderRadius: 2, height: '100%' }}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Paper sx={{ p: 3, borderBottom: '6px solid #000', borderRadius: 2, height: '100%' }}>
                         <Typography variant="h6" color="textSecondary" gutterBottom>Work Hours</Typography>
                         <Typography variant="h2" fontWeight="900" sx={{ fontSize: { xs: '2rem', lg: '3.75rem' } }}>{formatDuration(totalSec)}</Typography>
                         <Typography variant="caption" color="textSecondary">Total logged this week</Typography>

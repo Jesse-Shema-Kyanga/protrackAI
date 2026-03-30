@@ -150,8 +150,9 @@ const Feedback = () => {
 
             {/* SUPERVISOR VIEW */}
             {isSupervisor && tab === 0 && (
-                <Paper sx={{ p: 4, maxWidth: 600 }}>
-                    <Typography variant="h6" mb={2}>Give Feedback to Employee</Typography>
+                <Box display="flex" justifyContent="center">
+                    <Paper sx={{ p: 4, width: '100%', maxWidth: 800, borderRadius: 3 }}>
+                        <Typography variant="h5" fontWeight="950" mb={3}>Give Feedback to Employee</Typography>
                     <FormControl fullWidth margin="normal">
                         <InputLabel>Employee</InputLabel>
                         <Select
@@ -184,8 +185,9 @@ const Feedback = () => {
                         value={formData.rating}
                         onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
                     />
-                    <Button variant="contained" sx={{ mt: 2 }} onClick={handleSubmitFeedback}>Submit Feedback</Button>
-                </Paper>
+                    <Button variant="contained" size="large" sx={{ mt: 3, fontWeight: 'bold', borderRadius: 2 }} onClick={handleSubmitFeedback} fullWidth>Submit Feedback</Button>
+                    </Paper>
+                </Box>
             )}
 
             {isSupervisor && tab === 1 && (
@@ -254,8 +256,10 @@ const Feedback = () => {
 
             {/* EMPLOYEE VIEW */}
             {!isSupervisor && tab === 0 && (
-                <List sx={{ bgcolor: 'background.paper' }}>
-                    {feedbackList.map((fb, i) => (
+                <Box display="flex" justifyContent="center">
+                    <Paper sx={{ width: '100%', maxWidth: 800, borderRadius: 3, overflow: 'hidden' }}>
+                        <List sx={{ bgcolor: 'background.paper' }}>
+                            {feedbackList.map((fb, i) => (
                         <ListItem key={i} divider alignItems="flex-start">
                             <ListItemText
                                 primary={
@@ -275,8 +279,10 @@ const Feedback = () => {
                             />
                         </ListItem>
                     ))}
-                    {feedbackList.length === 0 && <Typography p={2}>No feedback received yet.</Typography>}
-                </List>
+                            {feedbackList.length === 0 && <Typography p={4} align="center" color="textSecondary">No feedback received yet.</Typography>}
+                        </List>
+                    </Paper>
+                </Box>
             )}
 
             {!isSupervisor && tab === 1 && (
@@ -314,8 +320,8 @@ const Feedback = () => {
                                                 </Box>
                                                 <Divider />
                                                 <Box display="flex" justifyContent="space-between" alignItems="center">
-                                                    <Typography variant="body2" color="textSecondary" fontWeight="bold">Attendance Integrity:</Typography>
-                                                    <Typography variant="body2" fontWeight="bold" color="primary.main">{myAttendance ? `${myAttendance.attendanceRate}%` : 'N/A'}</Typography>
+                                                    <Typography variant="body2" color="textSecondary" fontWeight="bold">Punctuality-Weighted Score:</Typography>
+                                                    <Typography variant="body2" fontWeight="bold" color="primary.main">{myAttendance && myAttendance.attendanceRate !== undefined ? `${myAttendance.attendanceRate}%` : '—'}</Typography>
                                                 </Box>
                                                 <Divider />
                                                 <Box display="flex" justifyContent="space-between" alignItems="center">

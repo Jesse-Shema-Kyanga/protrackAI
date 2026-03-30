@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Grid, Paper, Typography, Box, Select, MenuItem, FormControl, Button,
     List, ListItem, ListItemText, Table, TableBody, TableCell, TableContainer,
-    TableHead, TableRow, Chip, CircularProgress, TextField
+    TableHead, TableRow, Chip, CircularProgress, TextField, Alert, AlertTitle
 } from '@mui/material';
 import Assessment from '@mui/icons-material/Assessment';
 import Warning from '@mui/icons-material/Warning';
@@ -118,6 +118,14 @@ const HRDashboard = () => {
                 </Box>
             </Box>
 
+            {/* Performance Risk Banner */}
+            {(analytics.underperforming?.length > 0) && (
+                <Alert severity="error" sx={{ mb: 4, borderRadius: 2, border: '1px solid #f44336' }}>
+                    <AlertTitle sx={{ fontWeight: 'bold' }}>Workforce Performance Risk Detected</AlertTitle>
+                    {analytics.underperforming.length} employee{analytics.underperforming.length > 1 ? 's are' : ' is'} currently flagged for productivity below 50%. Review the full roster under <strong>Reports &amp; Analytics</strong>.
+                </Alert>
+            )}
+
             {/* KPI Cards */}
             <Grid container spacing={4} mb={6}>
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -151,13 +159,13 @@ const HRDashboard = () => {
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 3, borderTop: '6px solid #ffcc00', borderRadius: 3 }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                            <Typography variant="overline" fontWeight="bold" color="textSecondary">Strategic Pulse</Typography>
-                            <TrendingUp color="primary" />
+                            <Typography variant="overline" fontWeight="bold" color="textSecondary">Attendance & Reliability</Typography>
+                            <Assessment color="primary" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{pendingEvals}</Typography>
-                        <Typography variant="caption" color={pendingEvals > 0 ? "error.main" : "success.main"} fontWeight="bold">
-                            {pendingEvals > 0 ? 'Pending Audit' : 'Complete'}
+                        <Typography variant="h3" fontWeight="950" color={analytics.attendanceRate >= 90 ? 'success.main' : analytics.attendanceRate >= 70 ? 'warning.main' : 'error.main'}>
+                            {analytics.attendanceRate}%
                         </Typography>
+                        <Typography variant="caption" color="textSecondary">Punctuality-Weighted Score</Typography>
                     </Paper>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -217,39 +225,34 @@ const HRDashboard = () => {
                                 <TableHead>
                                     <TableRow>
                                         <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.paper' }}>Team Name</TableCell>
-                                        <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.paper' }}>Efficiency</TableCell>
-                                        <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.paper' }}>Output</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Attendance (%)</TableCell>
+                                        <TableCell align="center" sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Output (Hours)</TableCell>
                                         <TableCell sx={{ fontWeight: 'bold', bgcolor: 'background.paper' }}>Status</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {(analytics.teams || []).map((team) => (
+                                    {(analytics.teams || []).slice(0, 5).map((team) => (
                                         <TableRow key={team.name} hover>
-                                            <TableCell fontWeight="bold">{team.name}</TableCell>
-                                            <TableCell>
-                                                <Box display="flex" alignItems="center" gap={1}>
-                                                    <Box sx={{ width: '100%', mr: 1 }}>
-                                                        <Box sx={{ height: 8, width: '100%', bgcolor: 'action.hover', borderRadius: 4, overflow: 'hidden' }}>
-                                                            <Box sx={{ height: '100%', width: `${team.prod}%`, bgcolor: team.prod >= 70 ? 'success.main' : 'warning.main' }} />
-                                                        </Box>
-                                                    </Box>
-                                                    <Typography variant="body2">{team.prod}%</Typography>
-                                                </Box>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>{team.name}</TableCell>
+                                            <TableCell align="center">
+                                                <Typography fontWeight="bold" color={team.attendance >= 90 ? 'success.main' : 'warning.main'}>
+                                                    {team.attendance || 0}%
+                                                </Typography>
                                             </TableCell>
-                                            <TableCell>{team.loggedHours}h</TableCell>
-                                            <TableCell>
-                                                <Chip
-                                                    size="small"
-                                                    label={team.prod >= 70 ? 'Elite' : team.prod >= 40 ? 'Fair' : 'Critical'}
-                                                    color={team.prod >= 70 ? 'success' : team.prod >= 40 ? 'warning' : 'error'}
-                                                    sx={{ fontWeight: 'bold' }}
-                                                />
+                                            <TableCell align="center" sx={{ fontWeight: '700' }}>{team.loggedHours}h</TableCell>
+                                            <TableCell align="right">
+                                                <Box display="flex" alignItems="center" justifyContent="flex-end" gap={1}>
+                                                    <Box sx={{ width: 60, height: 8, bgcolor: 'action.hover', borderRadius: 4, overflow: 'hidden' }}>
+                                                        <Box sx={{ height: '100%', width: `${team.prod}%`, bgcolor: team.prod >= 70 ? 'success.main' : 'warning.main' }} />
+                                                    </Box>
+                                                    <Typography variant="caption" fontWeight="bold">{team.prod}%</Typography>
+                                                </Box>
                                             </TableCell>
                                         </TableRow>
                                     ))}
                                     {(!analytics.teams || analytics.teams.length === 0) && (
                                         <TableRow>
-                                            <TableCell colSpan={4} align="center">No team-level data found yet.</TableCell>
+                                            <TableCell colSpan={5} align="center">No team-level data found yet.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>

@@ -20,6 +20,7 @@ import ReviewQueue from './pages/ReviewQueue';
 import Profile from './pages/Profile';
 import LeaveManagement from './pages/LeaveManagement';
 import OrgManagement from './pages/OrgManagement';
+import EmployeeRiskProfile from './pages/EmployeeRiskProfile';
 import { Box, Typography, GlobalStyles } from '@mui/material';
 
 // Placeholder Pages (Remaining)
@@ -124,6 +125,7 @@ function App() {
                     <Route path="/hr-analytics" element={<WorkforceAnalytics />} />
                     <Route path="/org-management" element={<OrgManagement />} />
                     <Route path="/evaluations" element={<Feedback />} />
+                    <Route path="/employee-risk/:userId" element={<EmployeeRiskProfile />} />
                   </Route>
 
                   <Route path="/tasks" element={<Tasks />} />

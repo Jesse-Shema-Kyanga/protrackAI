@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Grid, Paper, Typography, Box, Select, MenuItem, FormControl, Button, InputLabel,
     List, ListItem, ListItemText, Table, TableBody, TableCell, TableContainer,
@@ -16,6 +17,7 @@ import Speed from '@mui/icons-material/Speed';
 
 const WorkforceAnalytics = () => {
     const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [period, setPeriod] = useState('month');
     const [viewMode, setViewMode] = useState('department'); // 'department' or 'team'
     const [analytics, setAnalytics] = useState(null);
@@ -106,13 +108,14 @@ const WorkforceAnalytics = () => {
                         startIcon={<Assessment />}
                         onClick={async () => {
                             try {
-                                const response = await axios.get(`/api/reports/hr-pdf?period=${period}&reportType=${reportType}`, {
+                                const response = await axios.get(`/api/reports/hr-pdf?period=${period}&reportType=${reportType}&viewMode=${viewMode}`, {
                                     responseType: 'blob'
                                 });
                                 const url = window.URL.createObjectURL(new Blob([response.data]));
                                 const link = document.createElement('a');
                                 link.href = url;
-                                link.setAttribute('download', `HR_Audit_${period}_${reportType}.pdf`);
+                                const dateStr = new Date().toISOString().split('T')[0];
+                                link.setAttribute('download', `MTN_Workforce_Audit_${viewMode.toUpperCase()}_${reportType.toUpperCase()}_${period}_${dateStr}.pdf`);
                                 document.body.appendChild(link);
                                 link.click();
                                 link.remove();
@@ -189,7 +192,16 @@ const WorkforceAnalytics = () => {
                     <Grid container spacing={2}>
                         {analytics.underperforming.map((risk, i) => (
                             <Grid item xs={12} sm={6} md={3} key={i}>
-                                <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}>
+                                <Box
+                                    onClick={() => navigate(`/employee-risk/${risk.userId || risk.name}`)}
+                                    sx={{
+                                        p: 2, borderRadius: 2, bgcolor: 'action.hover',
+                                        border: '1px solid', borderColor: 'divider',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        '&:hover': { bgcolor: 'error.main', color: '#fff', '& *': { color: '#fff !important' } }
+                                    }}
+                                >
                                     <Typography variant="subtitle2" fontWeight="bold">{risk.name}</Typography>
                                     <Typography variant="caption" color="textSecondary" display="block">
                                         {risk.dept} | {risk.team}
@@ -200,6 +212,7 @@ const WorkforceAnalytics = () => {
                                         </Box>
                                         <Typography variant="caption" fontWeight="bold" color="error.main">{risk.score}%</Typography>
                                     </Box>
+                                    <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.6 }}>Click to view profile →</Typography>
                                 </Box>
                             </Grid>
                         ))}
@@ -223,6 +236,7 @@ const WorkforceAnalytics = () => {
                                     {viewMode === 'department' ? 'Department' : 'Team / Unit'}
                                 </TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Efficiency (%)</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Attendance (%)</TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Output (Hours)</TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Integrity Status</TableCell>
                             </TableRow>
@@ -242,6 +256,11 @@ const WorkforceAnalytics = () => {
                                             />
                                             <Typography variant="h6" fontWeight="900">{item.prod}%</Typography>
                                         </Box>
+                                    </TableCell>
+                                    <TableCell align="center">
+                                        <Typography variant="h6" fontWeight="900" color={item.attendance >= 90 ? 'success.main' : item.attendance >= 70 ? 'warning.main' : 'error.main'}>
+                                            {item.attendance || 0}%
+                                        </Typography>
                                     </TableCell>
                                     <TableCell align="center" sx={{ fontWeight: '700' }}>
                                         {formatDuration(item.totalDuration || item.loggedHours * 3600)}

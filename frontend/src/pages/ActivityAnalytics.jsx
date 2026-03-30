@@ -313,7 +313,8 @@ const ActivityAnalytics = () => {
                                         const url = window.URL.createObjectURL(new Blob([response.data]));
                                         const link = document.createElement('a');
                                         link.href = url;
-                                        link.setAttribute('download', `Team_Summary_${new Date().toISOString().split('T')[0]}.pdf`);
+                                        const dateStr = new Date().toISOString().split('T')[0];
+                                        link.setAttribute('download', `MTN_Team_Audit_${user?.team || 'Report'}_${period}_${dateStr}.pdf`);
                                         document.body.appendChild(link);
                                         link.click();
                                         link.remove();
@@ -342,7 +343,10 @@ const ActivityAnalytics = () => {
                                     const url = window.URL.createObjectURL(new Blob([response.data]));
                                     const link = document.createElement('a');
                                     link.href = url;
-                                    link.setAttribute('download', `ProTrack_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                                    const dateStr = new Date().toISOString().split('T')[0];
+                                    const selectedEmp = employees.find(e => e.id === selectedUserId);
+                                    const empName = selectedEmp ? selectedEmp.name.replace(/\s+/g, '_') : selectedUserId;
+                                    link.setAttribute('download', `MTN_Audit_${empName}_${period}_${reportType.toUpperCase()}_${dateStr}.pdf`);
                                     document.body.appendChild(link);
                                     link.click();
                                     link.remove();
@@ -360,13 +364,30 @@ const ActivityAnalytics = () => {
                             variant="outlined"
                             onClick={() => {
                                 if (data?.recentActivities) {
-                                    const exportLogs = data.recentActivities.map(l => ({
-                                        App: l.appName || l.url,
-                                        Class: l.classified,
-                                        DurationSeconds: l.duration,
-                                        Time: new Date(l.timestamp).toLocaleString()
+                                    const dateStr = new Date().toISOString().split('T')[0];
+                                    const selectedEmp = employees.find(e => e.id === selectedUserId);
+                                    const empName = selectedEmp ? selectedEmp.name.replace(/\s+/g, '_') : (user.name?.replace(/\s+/g, '_') || selectedUserId);
+                                    const periodLabel = period === 'custom' ? `${startDate}_to_${endDate}` : period;
+                                    const csvFilename = `MTN_Activity_Log_${empName}_${periodLabel}_${dateStr}.csv`;
+
+                                    const formatDur = (secs) => {
+                                        if (!secs || secs <= 0) return '0m';
+                                        const h = Math.floor(secs / 3600);
+                                        const m = Math.floor((secs % 3600) / 60);
+                                        return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+                                    };
+
+                                    const exportLogs = data.recentActivities.map((l, i) => ({
+                                        '#': i + 1,
+                                        'Application / URL': l.appName || l.url || 'Unknown',
+                                        'Classification': (l.classified || 'Unclassified').replace(/-/g, ' ').toUpperCase(),
+                                        'Duration': formatDur(l.duration),
+                                        'Duration (s)': l.duration || 0,
+                                        'Timestamp': new Date(l.timestamp).toLocaleString('en-GB'),
+                                        'Period': periodLabel.toUpperCase(),
+                                        'Generated': dateStr
                                     }));
-                                    downloadCSV(exportLogs, 'my_activity_logs.csv');
+                                    downloadCSV(exportLogs, csvFilename);
                                 }
                             }}
                         >

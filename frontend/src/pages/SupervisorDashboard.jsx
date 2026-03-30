@@ -1,7 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
 import {
     Grid, Paper, Typography, Box, Select, MenuItem, FormControl, Button,
-    List, ListItem, ListItemText, CircularProgress, Chip, TextField
+    List, ListItem, ListItemText, CircularProgress, Chip, TextField,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Tabs, Tab
 } from '@mui/material';
 import {
     TrendingUp, TrendingDown, Assessment, Warning, CheckCircle,
@@ -34,6 +36,7 @@ const SupervisorDashboard = () => {
     const [period, setPeriod] = useState('month');
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState(0);
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
 
@@ -104,8 +107,22 @@ const SupervisorDashboard = () => {
         return `${m}m`;
     };
 
+    const pulseKeyframes = `
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+        @keyframes pulse-away {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        }
+    `;
+
     return (
         <Box>
+            <style>{pulseKeyframes}</style>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={6}>
                 <Box>
                     <Typography variant="h4" fontWeight="950" sx={{ letterSpacing: '-1.5px', textTransform: 'uppercase' }}>
@@ -190,26 +207,94 @@ const SupervisorDashboard = () => {
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Paper sx={{ p: 3, borderTop: '6px solid #000', borderRadius: 3 }}>
                         <Box display="flex" justifyContent="space-between" mb={1}>
-                            <Typography variant="overline" fontWeight="bold">Compliance</Typography>
+                            <Typography variant="overline" fontWeight="bold">Attendance</Typography>
                             <Assessment color="inherit" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics.alerts.length === 0 ? '100' : '85'}%</Typography>
-                        <Typography variant="caption" color={analytics.alerts.length > 0 ? 'error.main' : 'success.main'} fontWeight="bold">
-                            {analytics.alerts.length} Active Alerts
-                        </Typography>
+                        <Typography variant="h3" fontWeight="950">{analytics.attendance || 0}%</Typography>
+                        <Typography variant="caption" color="textSecondary">Punctuality-Weighted Score</Typography>
                     </Paper>
                 </Grid>
             </Grid>
 
+            {/* Hub Tabs */}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4 }}>
+                <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} textColor="primary" indicatorColor="primary">
+                    <Tab label="Performance Analytics" sx={{ fontWeight: 'bold' }} />
+                    <Tab label="Live Team Status" sx={{ fontWeight: 'bold' }} />
+                </Tabs>
+            </Box>
+
             <Grid container spacing={4}>
-                {/* Performance Chart */}
+                {/* Main Content Areas */}
                 <Grid size={{ xs: 12, md: 8 }}>
-                    <Paper sx={{ p: 4, borderRadius: 3, height: '100%' }}>
-                        <Typography variant="h5" fontWeight="950" mb={4}>Team Member Performance</Typography>
-                        <Box sx={{ height: 300, width: '100%' }}>
-                            <Bar data={chartData} options={chartOptions} />
-                        </Box>
-                    </Paper>
+                    {activeTab === 0 && (
+                        <Paper sx={{ p: 4, borderRadius: 3, mb: 4 }}>
+                            <Typography variant="h5" fontWeight="950" mb={4}>Team Member Productivity</Typography>
+                            <Box sx={{ height: 400, width: '100%' }}>
+                                <Bar data={chartData} options={chartOptions} />
+                            </Box>
+                        </Paper>
+                    )}
+
+                    {activeTab === 1 && (
+                        <Paper sx={{ p: 4, borderRadius: 3 }}>
+                            <Typography variant="h6" fontWeight="950" mb={3}>Operational Status Roster</Typography>
+                            <TableContainer>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                                            <TableCell sx={{ fontWeight: 'bold' }}>Employee</TableCell>
+                                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Efficiency</TableCell>
+                                            <TableCell align="left" sx={{ fontWeight: 'bold' }}>Current Action / Justification</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {(analytics.userProd || []).map((u, i) => (
+                                            <TableRow key={i} hover>
+                                                <TableCell>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Box sx={{
+                                                            width: 10, height: 10, borderRadius: '50%',
+                                                            bgcolor: u.liveStatus === 'check-in' ? '#4caf50' : '#ffc107',
+                                                            animation: u.liveStatus === 'check-in' ? 'pulse 2s infinite' : 'pulse-away 2s infinite'
+                                                        }} />
+                                                        <Typography variant="caption" fontWeight="bold" sx={{ color: u.liveStatus === 'check-in' ? '#4caf50' : '#ffc107', textTransform: 'uppercase' }}>
+                                                            {u.liveStatus === 'check-in' ? 'Checked In' : 'Away'}
+                                                        </Typography>
+                                                    </Box>
+                                                </TableCell>
+                                                <TableCell sx={{ fontWeight: 'bold' }}>{u.name}</TableCell>
+                                                <TableCell align="center">
+                                                    <Chip 
+                                                        label={`${u.productivity}%`} 
+                                                        size="small" 
+                                                        color={u.productivity >= 70 ? 'success' : u.productivity >= 40 ? 'warning' : 'error'}
+                                                        sx={{ fontWeight: 'bold' }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="left">
+                                                    <Chip 
+                                                        label={u.lastCheckOutReason || (u.liveStatus === 'check-in' ? 'Active' : 'Reason not provided')}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color={u.liveStatus === 'check-in' ? 'success' : 'warning'}
+                                                        sx={{ 
+                                                            fontWeight: 'bold', 
+                                                            textTransform: 'uppercase',
+                                                            fontSize: '0.65rem',
+                                                            px: 1,
+                                                            bgcolor: u.liveStatus === 'check-in' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 193, 7, 0.1)'
+                                                        }}
+                                                    />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
+                        </Paper>
+                    )}
                 </Grid>
 
                 {/* Alerts & Top Performer */}
