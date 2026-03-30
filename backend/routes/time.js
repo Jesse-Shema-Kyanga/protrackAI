@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const Activity = require('../models/Activity');
 const Leave = require('../models/Leave');
 const { authMiddleware } = require('../middleware/auth');
+const { getWorkingDays } = require('../utils/attendance');
 
 // Protect all time tracking routes
 router.use(authMiddleware);
@@ -74,7 +75,7 @@ const getAttendance = async (req, res) => {
     // Create notifications for absent employees (only if it's a workday and past 10 AM)
     const now = new Date();
     const isWorkday = now.getDay() >= 1 && now.getDay() <= 5; // Mon-Fri
-    const isPastCutoff = now.getHours() >= 17; // After 5 PM (shift end)
+    const isPastCutoff = now.getHours() >= 14; // After 2 PM as requested
 
     if (isWorkday && isPastCutoff && team) {
       for (const absentUser of absentUsers) {
@@ -138,10 +139,12 @@ const getAttendance = async (req, res) => {
         date: log.timestamp.toISOString().split('T')[0],
         checkInTime: log.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         checkOutTime: checkOutLog ? new Date(checkOutLog.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : null,
+        checkOutReason: checkOutLog ? checkOutLog.reason : null,
         firstActivity: firstActivity ? new Date(firstActivity.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--',
         startGap: startGap,
         hours: hours || '--',
         status: log.status,
+        minutesLate: log.status === 'late' ? Math.round((new Date(log.timestamp) - new Date(new Date(log.timestamp).setHours(9, 0, 0, 0))) / 60000) : 0,
         timestamp: log.timestamp
       };
     }));
@@ -184,12 +187,28 @@ const getAttendance = async (req, res) => {
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
 
-    // Get unique days in the logs
-    const uniqueDays = new Set(rawLogs.map(l => l.timestamp.toISOString().split('T')[0]));
-    const numDays = Math.max(1, uniqueDays.size);
+    const workingDaysCount = getWorkingDays(start, end);
+    let totalPotentialSlots = totalExpected * workingDaysCount;
 
-    // Potential slots = total employees * days in period
-    const totalPotentialSlots = totalExpected * numDays;
+    // Subtract approved leave days within the period for the expected users
+    const leaves = await Leave.find({
+      userId: { $in: expectedUsers.map(u => u.id) },
+      status: 'approved',
+      startDate: { $lte: end },
+      endDate: { $gte: start }
+    });
+
+    leaves.forEach(leave => {
+      // Find overlap between leave period and [start, end]
+      const overlapStart = new Date(Math.max(new Date(leave.startDate), start));
+      const overlapEnd = new Date(Math.min(new Date(leave.endDate), end));
+      if (overlapStart <= overlapEnd) {
+        totalPotentialSlots -= Math.max(0, getWorkingDays(overlapStart, overlapEnd));
+      }
+    });
+
+    // Ensure we don't divide by zero
+    totalPotentialSlots = Math.max(1, totalPotentialSlots);
 
     // Calculate average hours
     const logsWithHours = finalLogs.filter(l => l.hours !== '--' && !isNaN(parseFloat(l.hours)));
@@ -197,16 +216,27 @@ const getAttendance = async (req, res) => {
     const avgDaily = logsWithHours.length > 0 ? (totalHoursAgg / logsWithHours.length).toFixed(1) : 0;
     const avgWeekly = (avgDaily * 5).toFixed(1);
 
-    const totalOvertime = logsWithHours.reduce((sum, l) => {
-      const hours = parseFloat(l.hours);
-      return sum + (hours > 8 ? hours - 8 : 0);
-    }, 0);
+    // Weighted Lateness for Reliability Score
+    let reliabilityPoints = 0;
+    finalLogs.forEach(l => {
+      if (l.status === 'present') {
+        reliabilityPoints += 100;
+      } else if (l.status === 'late') {
+        const mins = l.minutesLate || 0;
+        if (mins <= 5) reliabilityPoints += 98; // Grace
+        else if (mins <= 15) reliabilityPoints += 90;
+        else if (mins <= 60) reliabilityPoints += 70;
+        else reliabilityPoints += 50; // Critical Lateness
+      }
+    });
+
+    const reliabilityScore = totalPotentialSlots > 0 ? Math.min(100, Math.round(reliabilityPoints / totalPotentialSlots)) : 0;
 
     const metrics = {
       present,
       late,
       absent,
-      attendanceRate: totalPotentialSlots > 0 ? Math.min(100, Math.round(((present + late) / totalPotentialSlots) * 100)) : 0,
+      attendanceRate: reliabilityScore,
       lateRate: totalPotentialSlots > 0 ? Math.min(100, Math.round((late / totalPotentialSlots) * 100)) : 0,
       monthlyAbsences: monthlyAbsenceNotifs,
       monthlyLates,
@@ -229,8 +259,15 @@ const getAttendance = async (req, res) => {
     });
 
     // Pattern Detection for Absences
+    const absenceMatch = { type: 'absent', timestamp: { $gte: start } };
+    if (team) {
+      absenceMatch.team = team;
+    } else if (userId || matchQuery.userId) {
+      absenceMatch.userId = userId || matchQuery.userId;
+    }
+
     const absencesByUser = await Notification.aggregate([
-      { $match: { type: 'absent', team: team, timestamp: { $gte: thirtyDaysAgo } } },
+      { $match: absenceMatch },
       { $group: { _id: '$userId', count: { $sum: 1 } } }
     ]);
 
@@ -262,7 +299,7 @@ const getAttendance = async (req, res) => {
       }
     }
 
-    res.json({ logs: finalLogs, metrics, alerts, realTimeStatus });
+    res.json({ logs: finalLogs, metrics, alerts, realTimeStatus, lastReason: latestRawLog?.reason });
 
   } catch (err) {
     res.status(500).json({ error: err.message });

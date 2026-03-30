@@ -4,8 +4,10 @@ const User = require('../models/User');
 const Activity = require('../models/Activity');
 const TimeLog = require('../models/TimeLog');
 const Task = require('../models/Task');
+const Leave = require('../models/Leave');
 const { authMiddleware } = require('../middleware/auth');
 const { maskUrl } = require('../utils/privacy');
+const { getWorkingDays } = require('../utils/attendance');
 
 // Protect all analytics routes
 router.use(authMiddleware);
@@ -21,163 +23,194 @@ router.get('/departments', async (req, res) => {
 
 router.get('/hr', async (req, res) => {
   try {
-    const { period = 'month', department } = req.query;
+    const { period = 'month', department, start, end } = req.query;
     const now = new Date();
-    let startDate = new Date(now);
-    if (period === 'week') startDate.setDate(now.getDate() - 7);
-    else if (period === 'quarter') startDate.setMonth(now.getMonth() - 3);
-    else startDate.setMonth(now.getMonth() - 1);
+    let startDate, endDate = now;
 
-    let userMatch = {};
-    if (department) userMatch.dept = department;
-    const usersInScope = await User.find(userMatch).select('id');
-    const userIds = usersInScope.map(u => u.id);
-    const staffCount = await User.countDocuments({ ...userMatch, role: 'employee' });
-
-    if (userIds.length === 0) {
-      return res.json({ prodRatio: 0, topProductive: [], topNonProductive: [], departments: [] });
+    if (period === 'custom' && start && end) {
+      startDate = new Date(start);
+      endDate = new Date(end);
+    } else {
+      startDate = new Date(now);
+      if (period === 'week') startDate.setDate(now.getDate() - 7);
+      else if (period === 'quarter') startDate.setMonth(now.getMonth() - 3);
+      else startDate.setMonth(now.getMonth() - 1);
     }
 
-    const activityMatch = { userId: { $in: userIds }, timestamp: { $gte: startDate } };
+    // Base match for Activities and TimeLogs
+    const baseMatch = { timestamp: { $gte: startDate, $lte: endDate } };
+    const userFilter = department ? { dept: department, role: 'employee' } : { role: 'employee' };
+    const targetUsers = await User.find(userFilter).select('id dept team');
+    const targetUserIds = targetUsers.map(u => u.id);
 
-    // Overall productivity
-    const overall = await Activity.aggregate([
-      { $match: activityMatch },
-      {
-        $group: {
-          _id: null,
-          totalDuration: { $sum: '$duration' },
-          productiveDuration: { $sum: { $cond: [{ $eq: ['$classified', 'productive'] }, '$duration', 0] } }
-        }
-      }
-    ]);
-
-    const totalDur = overall[0]?.totalDuration || 0;
-    const prodDur = overall[0]?.productiveDuration || 0;
+    // Filter Activities
+    const activityMatch = { ...baseMatch, userId: { $in: targetUserIds } };
+    const allActivities = await Activity.find(activityMatch);
+    
+    const totalDur = allActivities.reduce((s, a) => s + (a.duration || 0), 0);
+    const prodDur = allActivities.filter(a => a.classified === 'productive').reduce((s, a) => s + (a.duration || 0), 0);
     const prodRatio = totalDur > 0 ? Math.round((prodDur / totalDur) * 100) : 0;
 
-    // FIXED: Top productive apps (was empty array)
-    const topApps = await Activity.aggregate([
+    const staffCount = targetUserIds.length;
+
+    // App Breakdown
+    const appAgg = await Activity.aggregate([
       { $match: activityMatch },
-      {
-        $group: {
-          _id: { $ifNull: ['$appName', '$url'] },
-          duration: { $sum: '$duration' },
-          classified: { $first: '$classified' }
-        }
-      },
-      { $sort: { duration: -1 } },
-      { $limit: 20 }
+      { $group: { _id: '$appName', duration: { $sum: '$duration' }, classified: { $first: '$classified' } } },
+      { $sort: { duration: -1 } }
     ]);
 
-    // Privacy-conscious formatting: Use maskUrl utility
-    const formatName = (app) => {
-      if (!app._id) return 'Unknown';
-      return maskUrl(app._id);
-    };
+    const formatName = (a) => a._id ? a._id.charAt(0).toUpperCase() + a._id.slice(1) : 'System';
+    const topProductive = appAgg.filter(a => a.classified === 'productive').slice(0, 5).map(a => ({
+      name: formatName(a), duration: a.duration, percent: totalDur > 0 ? Math.round((a.duration / totalDur) * 100) : 0
+    }));
+    const topNonProductive = appAgg.filter(a => a.classified === 'non-productive').slice(0, 5).map(a => ({
+      name: formatName(a), duration: a.duration, percent: totalDur > 0 ? Math.round((a.duration / totalDur) * 100) : 0
+    }));
 
-    const topProductive = topApps
-      .filter(a => a.classified === 'productive')
-      .slice(0, 5)
-      .map(a => ({
-        name: formatName(a),
-        duration: a.duration,
-        percent: totalDur > 0 ? Math.round((a.duration / totalDur) * 100) : 0
-      }));
+    // Prepare Attendance Data
+    const checkInLogs = await TimeLog.find({ ...baseMatch, type: 'check-in', userId: { $in: targetUserIds } });
 
-    const topNonProductive = topApps
-      .filter(a => a.classified === 'non-productive')
-      .slice(0, 5)
-      .map(a => ({
-        name: formatName(a),
-        duration: a.duration,
-        percent: totalDur > 0 ? Math.round((a.duration / totalDur) * 100) : 0
-      }));
+    // Department Breakdown (Show all even if filtered?)
+    const depts = department ? [department] : await User.distinct('dept');
+    const deptStats = await Promise.all(depts.filter(d => d).map(async (dName) => {
+      const dUsers = targetUsers.filter(u => u.dept === dName);
+      const ids = dUsers.map(u => u.id);
+      if (ids.length === 0) return null;
 
-    // FIXED: Departmental breakdown (was empty array)
-    const deptStats = await Activity.aggregate([
+      const dActs = allActivities.filter(a => ids.includes(a.userId));
+      const dTotal = dActs.reduce((s, a) => s + (a.duration || 0), 0);
+      const dProd = dActs.filter(a => a.classified === 'productive').reduce((s, a) => s + (a.duration || 0), 0);
+
+      const workingDays = getWorkingDays(startDate, endDate);
+      let expected = ids.length * workingDays;
+      const dLeaves = await Leave.find({ userId: { $in: ids }, status: 'approved', startDate: { $lte: endDate }, endDate: { $gte: startDate } });
+      dLeaves.forEach(l => {
+        const os = new Date(Math.max(new Date(l.startDate), startDate));
+        const oe = new Date(Math.min(new Date(l.endDate), endDate));
+        if (os <= oe) expected -= Math.max(0, getWorkingDays(os, oe));
+      });
+      const dLogs = checkInLogs.filter(l => ids.includes(l.userId));
+      const deptEvents = new Set(dLogs.map(l => l.timestamp ? `${l.userId}-${l.timestamp.toISOString().split('T')[0]}` : null).filter(Boolean));
+
+      let dPoints = 0;
+      deptEvents.forEach(key => {
+        const log = dLogs.find(l => l.timestamp && `${l.userId}-${l.timestamp.toISOString().split('T')[0]}` === key);
+        if (!log) return;
+        if (log.status === 'present') dPoints += 100;
+        else if (log.status === 'late') {
+          const bizStart = new Date(log.timestamp).setHours(9, 0, 0, 0);
+          const mins = Math.round((new Date(log.timestamp) - new Date(bizStart)) / 60000);
+          if (mins <= 5) dPoints += 98;
+          else if (mins <= 15) dPoints += 90;
+          else if (mins <= 60) dPoints += 70;
+          else dPoints += 50;
+        }
+      });
+
+      return {
+        name: dName,
+        prod: dTotal > 0 ? Math.round((dProd / dTotal) * 100) : 0,
+        totalDuration: dTotal,
+        loggedHours: Math.round(dTotal / 3600 * 10) / 10,
+        attendance: expected > 0 ? Math.min(100, Math.round(dPoints / expected)) : 0,
+        count: ids.length
+      };
+    }));
+
+    // Team Breakdown
+    const teams = department ? await User.distinct('team', { dept: department }) : await User.distinct('team');
+    const teamStats = await Promise.all(teams.filter(t => t).map(async (tName) => {
+      const tUsers = targetUsers.filter(u => u.team === tName);
+      const ids = tUsers.map(u => u.id);
+      if (ids.length === 0) return null;
+
+      const tActs = allActivities.filter(a => ids.includes(a.userId));
+      const tTotal = tActs.reduce((s, a) => s + (a.duration || 0), 0);
+      const tProd = tActs.filter(a => a.classified === 'productive').reduce((s, a) => s + (a.duration || 0), 0);
+
+      const workingDays = getWorkingDays(startDate, endDate);
+      let expected = ids.length * workingDays;
+      const tLeaves = await Leave.find({ userId: { $in: ids }, status: 'approved', startDate: { $lte: endDate }, endDate: { $gte: startDate } });
+      tLeaves.forEach(l => {
+        const os = new Date(Math.max(new Date(l.startDate), startDate));
+        const oe = new Date(Math.min(new Date(l.endDate), endDate));
+        if (os <= oe) expected -= Math.max(0, getWorkingDays(os, oe));
+      });
+      const tLogs = checkInLogs.filter(l => ids.includes(l.userId));
+      const teamEvents = new Set(tLogs.map(l => l.timestamp ? `${l.userId}-${l.timestamp.toISOString().split('T')[0]}` : null).filter(Boolean));
+
+      let tPoints = 0;
+      teamEvents.forEach(key => {
+        const log = tLogs.find(l => l.timestamp && `${l.userId}-${l.timestamp.toISOString().split('T')[0]}` === key);
+        if (!log) return;
+        if (log.status === 'present') tPoints += 100;
+        else if (log.status === 'late') {
+          const bizStart = new Date(log.timestamp).setHours(9, 0, 0, 0);
+          const mins = Math.round((new Date(log.timestamp) - new Date(bizStart)) / 60000);
+          if (mins <= 5) tPoints += 98;
+          else if (mins <= 15) tPoints += 90;
+          else if (mins <= 60) tPoints += 70;
+          else tPoints += 50;
+        }
+      });
+
+      return {
+        name: tName,
+        prod: tTotal > 0 ? Math.round((tProd / tTotal) * 100) : 0,
+        totalDuration: tTotal,
+        loggedHours: Math.round(tTotal / 3600 * 10) / 10,
+        attendance: expected > 0 ? Math.min(100, Math.round(tPoints / expected)) : 0,
+        count: ids.length
+      };
+    }));
+
+    // Overall metrics
+    const workingDays = getWorkingDays(startDate, endDate);
+    const expectedCheckIns = Math.max(1, staffCount * workingDays);
+    const allApprovedLeaves = await Leave.find({ userId: { $in: targetUserIds }, status: 'approved', startDate: { $lte: endDate }, endDate: { $gte: startDate } });
+    
+    let totalOrgOverlapDays = 0;
+    allApprovedLeaves.forEach(l => {
+      const os = new Date(Math.max(new Date(l.startDate), startDate));
+      const oe = new Date(Math.min(new Date(l.endDate), endDate));
+      if (os <= oe) totalOrgOverlapDays += getWorkingDays(os, oe);
+    });
+
+    const adjustedOrgExpected = Math.max(1, expectedCheckIns - totalOrgOverlapDays);
+    const uniqueOrgEvents = new Set(checkInLogs.map(l => l.timestamp ? `${l.userId}-${l.timestamp.toISOString().split('T')[0]}` : null).filter(Boolean));
+    
+    let orgPoints = 0;
+    uniqueOrgEvents.forEach(key => {
+      const log = checkInLogs.find(l => l.timestamp && `${l.userId}-${l.timestamp.toISOString().split('T')[0]}` === key);
+      if (!log) return;
+      if (log.status === 'present') orgPoints += 100;
+      else if (log.status === 'late') {
+        const bizStart = new Date(log.timestamp).setHours(9,0,0,0);
+        const mins = Math.round((new Date(log.timestamp) - new Date(bizStart)) / 60000);
+        if (mins <= 5) orgPoints += 98;
+        else if (mins <= 15) orgPoints += 90;
+        else if (mins <= 60) orgPoints += 70;
+        else orgPoints += 50;
+      }
+    });
+
+    const attendanceRate = adjustedOrgExpected > 0 ? Math.min(100, Math.round(orgPoints / adjustedOrgExpected)) : 0;
+    const onTimeLogs = checkInLogs.filter(l => l.status === 'present');
+    const onTimeRate = uniqueOrgEvents.size > 0 ? Math.round((onTimeLogs.length / uniqueOrgEvents.size) * 100) : 0;
+
+    // Risks
+    const individualAgg = await Activity.aggregate([
       { $match: activityMatch },
-      { $lookup: { from: 'users', localField: 'userId', foreignField: 'id', as: 'user' } },
-      { $unwind: '$user' },
-      { $match: { 'user.dept': { $exists: true, $ne: null } } },
-      {
-        $group: {
-          _id: '$user.dept',
-          total: { $sum: '$duration' },
-          prod: { $sum: { $cond: [{ $eq: ['$classified', 'productive'] }, '$duration', 0] } }
-        }
-      },
-      {
-        $project: {
-          name: '$_id',
-          prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] },
-          nonProdHours: { $round: [{ $divide: [{ $subtract: ['$total', '$prod'] }, 3600] }, 1] },
-          totalDuration: '$total',
-          loggedHours: { $round: [{ $divide: ['$total', 3600] }, 1] },
-          trend: { $literal: 0 }
-        }
-      },
-      { $sort: { name: 1 } }
+      { $group: { _id: '$userId', total: { $sum: '$duration' }, prod: { $sum: { $cond: [{ $eq: ['$classified', 'productive'] }, '$duration', 0] } } } },
+      { $project: { userId: '$_id', prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] }, total: '$total' } },
+      { $match: { prod: { $lt: 50 }, total: { $gt: 3600 } } },
+      { $sort: { prod: 1 } }, { $limit: 10 }
     ]);
 
-    // Team-level breakdown for HR (NEW)
-    const teamStats = await Activity.aggregate([
-      { $match: activityMatch },
-      { $lookup: { from: 'users', localField: 'userId', foreignField: 'id', as: 'user' } },
-      { $unwind: '$user' },
-      { $match: { 'user.team': { $exists: true, $ne: null, $ne: "" } } },
-      {
-        $group: {
-          _id: '$user.team',
-          total: { $sum: '$duration' },
-          prod: { $sum: { $cond: [{ $eq: ['$classified', 'productive'] }, '$duration', 0] } }
-        }
-      },
-      {
-        $project: {
-          name: '$_id',
-          prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] },
-          totalDuration: '$total',
-          loggedHours: { $round: [{ $divide: ['$total', 3600] }, 1] }
-        }
-      },
-      { $sort: { prod: -1 } }
-    ]);
-
-    const attendanceRate = staffCount > 0 ? Math.round((new Set(timeLogs.map(l => l.userId)).size / staffCount) * 100) : 0;
-    const onTimeRate = timeLogs.length > 0 ? Math.round((onTimeLogs.length / timeLogs.length) * 100) : 0;
-
-    // Identify underperforming workers across the organization
-    const underperforming = teamStats
-      .filter(t => t.prod < 50)
-      .map(t => ({ name: t.name, type: 'team', score: t.prod, reason: 'Low Team Efficiency' }));
-
-    // Also check individual employees if needed, but for HR, team/dept risks are usually more relevant.
-    // Let's add top 5 individual risks too.
-    const individualActivities = await Activity.aggregate([
-      { $match: activityMatch },
-      {
-        $group: {
-          _id: '$userId',
-          total: { $sum: '$duration' },
-          prod: { $sum: { $cond: [{ $eq: ['$classified', 'productive'] }, '$duration', 0] } }
-        }
-      },
-      {
-        $project: {
-          userId: '$_id',
-          prod: { $round: [{ $multiply: [{ $divide: ['$prod', { $max: ['$total', 1] }] }, 100] }, 0] },
-          total: '$total'
-        }
-      },
-      { $match: { prod: { $lt: 50 }, total: { $gt: 3600 } } }, // Only if they have > 1h activity
-      { $sort: { prod: 1 } },
-      { $limit: 10 }
-    ]);
-
-    const userRisks = await Promise.all(individualActivities.map(async (a) => {
-      const u = await User.findOne({ id: a.userId }).select('name dept team');
-      return { name: u?.name || a.userId, dept: u?.dept, team: u?.team, score: a.prod, type: 'individual' };
+    const userRisks = await Promise.all(individualAgg.map(async (a) => {
+      const u = targetUsers.find(user => user.id === a.userId);
+      return { userId: a.userId, name: u?.name || a.userId, dept: u?.dept, team: u?.team, score: a.prod, type: 'individual' };
     }));
 
     res.json({
@@ -187,16 +220,17 @@ router.get('/hr', async (req, res) => {
       attendanceRate,
       topProductive,
       topNonProductive,
-      departments: deptStats,
-      teams: teamStats,
+      departments: deptStats.filter(Boolean),
+      teams: teamStats.filter(Boolean).sort((a,b) => b.prod - a.prod),
       underperforming: userRisks
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('HR Analytics Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.get('/supervisor', async (req, res) => {
   try {
@@ -206,8 +240,6 @@ router.get('/supervisor', async (req, res) => {
       return res.status(400).json({ error: 'supId and team required' });
     }
 
-    // ROBUSTNESS: Always fetch the latest team info for supervisors from the DB
-    // to handle cases where the token is stale after a team change.
     const currentUser = await User.findOne({ id: supId || req.user.id });
     const effectiveTeam = currentUser?.team || team;
 
@@ -219,20 +251,6 @@ router.get('/supervisor', async (req, res) => {
       role: 'employee'
     }).select('id name');
     const userIds = teamUsers.map(u => u.id);
-
-    if (userIds.length === 0) {
-      return res.json({
-        productivity: 0,
-        productivityTrend: 0,
-        taskCompletion: 0,
-        taskTrend: 0,
-        totalHours: 0,
-        openTasks: 0,
-        topPerformer: { name: 'N/A', prod: 0 },
-        atRisk: { name: 'N/A', prod: 0 },
-        alerts: []
-      });
-    }
 
     const now = new Date();
     let startDate, prevStartDate, prevEndDate;
@@ -246,11 +264,65 @@ router.get('/supervisor', async (req, res) => {
       prevStartDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       prevEndDate = new Date(startDate);
     } else {
-      // MONTH
       startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
       prevStartDate = new Date(startDate.getFullYear(), startDate.getMonth() - 1, startDate.getDate());
       prevEndDate = new Date(startDate);
     }
+
+    if (userIds.length === 0) {
+      return res.json({
+        productivity: 0,
+        productivityTrend: 0,
+        taskCompletion: 0,
+        taskTrend: 0,
+        totalHours: 0,
+        attendance: 0,
+        openTasks: 0,
+        topPerformer: { name: 'N/A', prod: 0 },
+        atRisk: { name: 'N/A', prod: 0 },
+        alerts: []
+      });
+    }
+
+    const periodWorkingDays = getWorkingDays(startDate, now);
+    let totalPotentialSlots = userIds.length * periodWorkingDays;
+
+    const teamLeaves = await Leave.find({
+      userId: { $in: userIds },
+      status: 'approved',
+      startDate: { $lte: now },
+      endDate: { $gte: startDate }
+    });
+
+    teamLeaves.forEach(leave => {
+        const overlapStart = new Date(Math.max(new Date(leave.startDate), startDate));
+        const overlapEnd = new Date(Math.min(new Date(leave.endDate), now));
+        if (overlapStart <= overlapEnd) {
+          totalPotentialSlots -= Math.max(0, getWorkingDays(overlapStart, overlapEnd));
+        }
+    });
+
+    const checkInLogs = await TimeLog.find({ userId: { $in: userIds }, timestamp: { $gte: startDate }, type: 'check-in' });
+    const uniqueCheckInEvents = new Set(checkInLogs.map(l => `${l.userId}-${l.timestamp.toISOString().split('T')[0]}`));
+    
+    // Reliability-weighted Attendance for Team
+    let teamReliabilityPoints = 0;
+    uniqueCheckInEvents.forEach(eventKey => {
+      const log = checkInLogs.find(l => `${l.userId}-${l.timestamp.toISOString().split('T')[0]}` === eventKey);
+      if (log.status === 'present') teamReliabilityPoints += 100;
+      else if (log.status === 'late') {
+        const mins = Math.round((new Date(log.timestamp) - new Date(new Date(log.timestamp).setHours(9, 0, 0, 0))) / 60000);
+        if (mins <= 5) teamReliabilityPoints += 98;
+        else if (mins <= 15) teamReliabilityPoints += 90;
+        else if (mins <= 60) teamReliabilityPoints += 70;
+        else teamReliabilityPoints += 50;
+      }
+    });
+
+    const teamAttendance = totalPotentialSlots > 0 ? Math.min(100, Math.round(teamReliabilityPoints / totalPotentialSlots)) : 0;
+
+
+
 
     // CURRENT PERIOD productivity
     const currentActivities = await Activity.aggregate([
@@ -276,10 +348,16 @@ router.get('/supervisor', async (req, res) => {
       }
     ]);
 
-    const userProd = currentActivities.map(a => ({
-      userId: a._id,
-      name: teamUsers.find(u => u.id === a._id)?.name || 'Unknown',
-      productivity: a.totalDuration > 0 ? Math.round((a.prodDuration / a.totalDuration) * 100) : 0
+    const userProd = await Promise.all(currentActivities.map(async (a) => {
+      const u = teamUsers.find(user => user.id === a._id);
+      const lastLog = await TimeLog.findOne({ userId: a._id }).sort({ timestamp: -1 });
+      return {
+        userId: a._id,
+        name: u?.name || 'Unknown',
+        productivity: a.totalDuration > 0 ? Math.round((a.prodDuration / a.totalDuration) * 100) : 0,
+        liveStatus: lastLog?.type || 'check-out',
+        lastCheckOutReason: lastLog?.type === 'check-out' ? (lastLog?.reason || 'Reason not provided') : 'Active'
+      };
     }));
 
     const avgProductivity = userProd.length > 0
@@ -394,6 +472,7 @@ router.get('/supervisor', async (req, res) => {
       taskTrend,
       totalHours,
       totalSeconds,
+      attendance: teamAttendance,
       openTasks,
       topPerformer: { name: topPerformer.name, prod: topPerformer.productivity },
       atRisk: { name: atRisk.name, prod: atRisk.productivity },
