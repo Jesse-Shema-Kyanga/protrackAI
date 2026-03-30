@@ -295,7 +295,8 @@ router.get('/pdf', async (req, res) => {
 
         const auditRows = await Promise.all(checkIns.map(async (l, i) => {
             const dayStart = new Date(l.timestamp); dayStart.setHours(0,0,0,0);
-            const firstTask = await Activity.findOne({ userId, timestamp: { $gte: dayStart } }).sort({ timestamp: 1 });
+            const dayEnd = new Date(l.timestamp); dayEnd.setHours(23,59,59,999);
+            const firstTask = await Activity.findOne({ userId, timestamp: { $gte: dayStart, $lte: dayEnd } }).sort({ timestamp: 1 });
             const gap = firstTask ? Math.round((firstTask.timestamp - l.timestamp) / 60000) : 0;
             return [
                 '#' + (i + 1),
