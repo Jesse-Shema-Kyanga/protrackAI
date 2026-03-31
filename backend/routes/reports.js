@@ -177,6 +177,7 @@ router.use(authMiddleware);
 //  GET /api/reports  (JSON stats)
 // ════════════════════════════════════════════════════════════════════════════
 router.get('/', async (req, res) => {
+  console.log(`[API] GET /api/reports - User: ${req.query.userId}, Period: ${req.query.period}`);
   try {
     const { userId, period = 'month', start, end } = req.query;
     if (!userId) return res.status(400).json({ error: 'Missing userId param' });
@@ -217,6 +218,7 @@ router.get('/', async (req, res) => {
     const recentItems = await Activity.find(activityMatch).sort({ timestamp: -1 }).limit(100);
     const sanitized = sanitizeActivities(recentItems, 'employee');
 
+    console.log(`[API] GET /api/reports - Success. Efficiency: ${efficiency}, Recent: ${sanitized.length}`);
     res.json({
       efficiency, totalTime, productiveTime, neutralTime, nonProductiveTime,
       recentActivities: sanitized,

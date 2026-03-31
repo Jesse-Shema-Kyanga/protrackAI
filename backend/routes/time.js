@@ -13,8 +13,9 @@ const User = require('../models/User');
 
 // Helper to get attendance data
 const getAttendance = async (req, res) => {
+  const { team, userId, startDate, endDate } = req.query;
+  console.log(`[API] GET /api/time - User: ${userId}, Team: ${team}`);
   try {
-    const { team, userId, startDate, endDate } = req.query;
     let matchQuery = {};
     let expectedUsers = [];
 
@@ -305,6 +306,7 @@ const getAttendance = async (req, res) => {
       }
     }
 
+    console.log(`[API] GET /api/time - Success. Logs: ${finalLogs.length}, Rate: ${metrics.attendanceRate}%`);
     res.json({ logs: finalLogs, metrics, alerts, realTimeStatus, lastReason: latestRawLog?.reason });
 
   } catch (err) {
