@@ -9,6 +9,7 @@ import {
     TrendingUp, TrendingDown, Assessment, Warning, CheckCircle,
     Star, AccessTime, AssignmentTurnedIn, GetApp, Speed
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
 import { formatDuration } from '../utils/timeFormat';
@@ -34,6 +35,7 @@ ChartJS.register(
 
 const SupervisorDashboard = () => {
     const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [period, setPeriod] = useState('month');
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -48,8 +50,8 @@ const SupervisorDashboard = () => {
             try {
                 const res = await axios.get(`/api/analytics/supervisor`, {
                     params: {
-                        supId: user.id || user.userId,
-                        team: user.team,
+                        supId: user?.id || user?.userId,
+                        team: user?.team,
                         period,
                         start: period === 'custom' ? startDate : undefined,
                         end: period === 'custom' ? endDate : undefined
@@ -67,7 +69,7 @@ const SupervisorDashboard = () => {
     }, [user, period, startDate, endDate]);
 
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}><CircularProgress color="primary" /></Box>;
-    if (!analytics) return <Typography color="error" align="center" mt={5}>No team data available. Consult HR to join a team.</Typography>;
+    if (!analytics || !user) return <Typography color="error" align="center" mt={5}>No team data available. Consult HR to join a team.</Typography>;
 
     // Chart Data
     const chartData = {
@@ -122,7 +124,7 @@ const SupervisorDashboard = () => {
                     <Typography variant="h4" fontWeight="950" sx={{ letterSpacing: '-1.5px', textTransform: 'uppercase' }}>
                         Team <Box component="span" color="primary.main">Command</Box>
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">Operational Management for Unit: <strong>{user.team}</strong></Typography>
+                    <Typography variant="body2" color="textSecondary">Operational Management for Unit: <strong>{user?.team || 'N/A'}</strong></Typography>
                 </Box>
                 <Box display="flex" gap={2}>
                     <FormControl size="small" sx={{ minWidth: 160 }}>
@@ -170,9 +172,9 @@ const SupervisorDashboard = () => {
                             <Typography variant="overline" fontWeight="bold">Productivity</Typography>
                             <Speed color="primary" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics.productivity}%</Typography>
-                        <Typography variant="caption" color={analytics.productivityTrend >= 0 ? 'success.main' : 'error.main'} fontWeight="bold">
-                            {analytics.productivityTrend >= 0 ? '+' : ''}{analytics.productivityTrend}% vs Last Period
+                        <Typography variant="h3" fontWeight="950">{analytics?.productivity || 0}%</Typography>
+                        <Typography variant="caption" color={(analytics?.productivityTrend || 0) >= 0 ? 'success.main' : 'error.main'} fontWeight="bold">
+                            {(analytics?.productivityTrend || 0) >= 0 ? '+' : ''}{analytics?.productivityTrend || 0}% vs Last Period
                         </Typography>
                     </Paper>
                 </Grid>
@@ -183,7 +185,7 @@ const SupervisorDashboard = () => {
                             <AccessTime color="inherit" />
                         </Box>
                         <Typography variant="h3" fontWeight="950" sx={{ fontSize: { xs: '2rem', lg: '3rem' } }}>
-                            {formatDuration(analytics.totalSeconds || analytics.totalHours * 3600)}
+                            {formatDuration(analytics?.totalSeconds || (analytics?.totalHours || 0) * 3600)}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">Cumulative Team Output</Typography>
                     </Paper>
@@ -194,8 +196,8 @@ const SupervisorDashboard = () => {
                             <Typography variant="overline" fontWeight="bold">Completion</Typography>
                             <AssignmentTurnedIn color="primary" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics.taskCompletion}%</Typography>
-                        <Typography variant="caption" color="textSecondary">{analytics.openTasks} Active Tasks</Typography>
+                        <Typography variant="h3" fontWeight="950">{analytics?.taskCompletion || 0}%</Typography>
+                        <Typography variant="caption" color="textSecondary">{analytics?.openTasks || 0} Active Tasks</Typography>
                     </Paper>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -204,7 +206,7 @@ const SupervisorDashboard = () => {
                             <Typography variant="overline" fontWeight="bold">Attendance</Typography>
                             <Assessment color="inherit" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics.attendance || 0}%</Typography>
+                        <Typography variant="h3" fontWeight="950">{analytics?.attendance || 0}%</Typography>
                         <Typography variant="caption" color="textSecondary">Punctuality-Weighted Score</Typography>
                     </Paper>
                 </Grid>
@@ -298,8 +300,8 @@ const SupervisorDashboard = () => {
                         <Box display="flex" alignItems="center" gap={2} mt={1}>
                             <Star color="inherit" />
                             <Box>
-                                <Typography variant="h6" fontWeight="bold">{analytics.topPerformer.name}</Typography>
-                                <Typography variant="body2">{analytics.topPerformer.prod}% Efficiency</Typography>
+                                <Typography variant="h6" fontWeight="bold">{analytics?.topPerformer?.name || 'N/A'}</Typography>
+                                <Typography variant="body2">{analytics?.topPerformer?.prod || 0}% Efficiency</Typography>
                             </Box>
                         </Box>
                     </Paper>
@@ -311,7 +313,7 @@ const SupervisorDashboard = () => {
                                 {analytics.underperforming.map((p, i) => (
                                     <Box
                                         key={i}
-                                        onClick={() => window.location.href = `/employee-risk/${p.userId || p.name}`}
+                                        onClick={() => navigate(`/employee-risk/${p.userId || p.name}`)}
                                         sx={{
                                             p: 1.5, mb: 1, borderRadius: 2, bgcolor: 'background.paper',
                                             border: '1px solid', borderColor: 'error.light',
@@ -359,7 +361,7 @@ const SupervisorDashboard = () => {
                             variant="contained"
                             color="primary"
                             sx={{ mt: 2, borderRadius: 2, fontWeight: 'bold' }}
-                            onClick={() => window.location.href = '/tasks'}
+                            onClick={() => navigate('/tasks')}
                         >
                             Assign New Mission
                         </Button>

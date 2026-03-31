@@ -419,8 +419,8 @@ router.get('/supervisor', async (req, res) => {
     const sortedByProd = [...userProd].sort((a, b) => b.productivity - a.productivity);
     const topPerformer = sortedByProd[0] || { name: 'N/A', productivity: 0 };
 
-    // FIXED: At Risk = productivity < 50% AND has significant activity
-    const atRiskUser = sortedByProd.find(u => u.productivity < 50) || sortedByProd[sortedByProd.length - 1];
+    // At Risk = productivity < 50%
+    const atRiskUser = sortedByProd.find(u => u.productivity < 50);
     const atRisk = atRiskUser || { name: 'N/A', productivity: 0 };
 
     // TASKS
