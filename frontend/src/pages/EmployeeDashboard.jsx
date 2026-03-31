@@ -10,6 +10,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import { formatDuration } from '../utils/timeFormat';
 
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -119,13 +120,6 @@ const EmployeeDashboard = () => {
         }],
     };
 
-    const formatDuration = (seconds) => {
-        if (!seconds || seconds <= 0) return '0m';
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
-        return `${m}m`;
-    };
 
     return (
         <Box sx={{ py: 2 }}>

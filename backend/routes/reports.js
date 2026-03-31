@@ -12,6 +12,7 @@ const { sanitizeActivities, aggregateByDomain } = require('../utils/privacy');
 const { getWorkingDays } = require('../utils/attendance');
 const PDFDocument = require('pdfkit');
 const axios = require('axios');
+const { formatDuration } = require('../utils/timeFormat');
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const GOLD   = '#FFCC00';
@@ -95,14 +96,6 @@ const drawFooter = (doc, generatedOn) => {
 };
 
 // ─ Duration Formatter ─────────────────────────────────────────────────────────
-const formatDuration = (secs) => {
-  if (!secs || secs <= 0) return '0m';
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-};
 
 // ─ Closing Signature Page ─────────────────────────────────────────────────────
 const drawSignaturePage = (doc, requesterName, generatedOn) => {
@@ -552,7 +545,7 @@ router.get('/hr-pdf', async (req, res) => {
                 '#' + (i + 1),
                 gName,
                 eff + '%',
-                focusHours + ' hrs',
+                formatDuration(prd),
                 { text: eff >= 70 ? 'OPTIMAL' : 'RISK', color: eff >= 70 ? GREEN : RED }
             ];
         } else {

@@ -18,7 +18,16 @@ const getAttendance = async (req, res) => {
     let matchQuery = {};
     let expectedUsers = [];
 
-    if (team || req.user.role === 'supervisor') {
+    if (userId) {
+      // Find the user case-insensitively to get their exact DB ID
+      const user = await User.findOne({ id: { $regex: new RegExp(`^${userId}$`, 'i') } }).select('id name dept');
+      if (user) {
+        expectedUsers = [user];
+        matchQuery.userId = user.id; // Use the exact case from the DB!
+      } else {
+        matchQuery.userId = userId;
+      }
+    } else if (team || req.user.role === 'supervisor') {
       const sup = await User.findOne({ id: req.user.id });
       const effectiveTeam = team || sup?.team;
 
@@ -27,10 +36,6 @@ const getAttendance = async (req, res) => {
         role: 'employee'
       }).select('id name dept');
       matchQuery.userId = { $in: expectedUsers.map(u => u.id) };
-    } else if (userId) {
-      matchQuery.userId = userId;
-      const user = await User.findOne({ id: userId }).select('id name dept');
-      if (user) expectedUsers = [user];
     } else if (req.user.role === 'hr') {
       // HR Global View
       expectedUsers = await User.find({ role: 'employee' }).select('id name dept');
@@ -210,11 +215,12 @@ const getAttendance = async (req, res) => {
     // Ensure we don't divide by zero
     totalPotentialSlots = Math.max(1, totalPotentialSlots);
 
-    // Calculate average hours
+    // Calculate average hours and overtime
     const logsWithHours = finalLogs.filter(l => l.hours !== '--' && !isNaN(parseFloat(l.hours)));
     const totalHoursAgg = logsWithHours.reduce((sum, l) => sum + parseFloat(l.hours), 0);
     const avgDaily = logsWithHours.length > 0 ? (totalHoursAgg / logsWithHours.length).toFixed(1) : 0;
     const avgWeekly = (avgDaily * 5).toFixed(1);
+    const totalOvertime = logsWithHours.reduce((sum, l) => sum + Math.max(0, parseFloat(l.hours) - 8), 0);
 
     // Weighted Lateness for Reliability Score
     let reliabilityPoints = 0;

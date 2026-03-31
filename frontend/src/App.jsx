@@ -111,12 +111,13 @@ function App() {
                 <Route element={<Layout />}>
                   <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
 
-                  {/* Supervisor Only */}
+                  {/* Supervisor and HR Shared */}
                   <Route element={<RoleProtectedRoute allowedRoles={['supervisor', 'hr']} />}>
                     <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
                     <Route path="/time" element={<TimeTracking />} />
                     <Route path="/ai-management" element={<AIManagement />} />
                     <Route path="/review-queue" element={<ReviewQueue />} />
+                    <Route path="/employee-risk/:userId" element={<EmployeeRiskProfile />} />
                   </Route>
 
                   {/* HR Only */}
@@ -125,7 +126,6 @@ function App() {
                     <Route path="/hr-analytics" element={<WorkforceAnalytics />} />
                     <Route path="/org-management" element={<OrgManagement />} />
                     <Route path="/evaluations" element={<Feedback />} />
-                    <Route path="/employee-risk/:userId" element={<EmployeeRiskProfile />} />
                   </Route>
 
                   <Route path="/tasks" element={<Tasks />} />

@@ -9,6 +9,7 @@ import ArrowBack from '@mui/icons-material/ArrowBack';
 import Warning from '@mui/icons-material/Warning';
 import CheckCircle from '@mui/icons-material/CheckCircle';
 import axios from 'axios';
+import { formatDuration, formatHours } from '../utils/timeFormat';
 
 const EmployeeRiskProfile = () => {
     const { userId } = useParams();
@@ -19,35 +20,32 @@ const EmployeeRiskProfile = () => {
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const formatDuration = (seconds) => {
-        if (!seconds || seconds <= 0) return '0m';
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
-        return `${m}m`;
-    };
 
     useEffect(() => {
         const fetch = async () => {
             if (!userId) return;
             setLoading(true);
             try {
-                const [tasksRes, userRes, attendanceRes, analyticsRes] = await Promise.all([
+                const [tasksRes, userRes, attendanceRes, reportRes] = await Promise.all([
                     axios.get(`/api/tasks/${userId}`).catch(() => ({ data: [] })),
                     axios.get(`/api/users/${userId}`).catch(() => ({ data: {} })),
                     axios.get(`/api/time`, { params: { userId } }).catch(() => ({ data: { logs: [], metrics: {} } })),
-                    axios.get(`/api/analytics/hr`).catch(() => ({ data: { underperforming: [] } }))
+                    axios.get(`/api/reports?userId=${userId}&period=month`).catch(() => ({ data: {} }))
                 ]);
 
                 const taskData = Array.isArray(tasksRes.data) ? tasksRes.data : [];
-                const allUnderperforming = analyticsRes.data?.underperforming || [];
-                const empRecord = allUnderperforming.find(e => e.userId === userId);
-
+                
                 setTasks(taskData);
                 setUserInfo(userRes.data);
                 setAttendance(attendanceRes.data);
-                // Use score from underperforming list for productivity
-                setReport(empRecord ? { efficiency: `${empRecord.score}%`, totalTime: null } : { efficiency: 'N/A', totalTime: null });
+                
+                // Fetch score and activities directly from the employee's 30-day report
+                const reportData = reportRes.data || {};
+                setReport({ 
+                    efficiency: reportData.efficiency || '0%', 
+                    totalTime: reportData.totalTime || 0,
+                    recentActivities: reportData.recentActivities || []
+                });
             } catch (err) {
                 console.error('Risk profile error:', err);
             } finally {
@@ -112,21 +110,21 @@ const EmployeeRiskProfile = () => {
 
             {/* KPI Row */}
             <Grid container spacing={3} mb={4}>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                     <Paper sx={{ p: 3, borderTop: '6px solid #ffcc00', borderRadius: 3 }}>
                         <Typography variant="overline" fontWeight="bold" color="textSecondary">Productivity</Typography>
                         <Typography variant="h3" fontWeight="950" color={`${statusColor}.main`}>{efficiency}</Typography>
                         <Chip label={statusLabel} color={statusColor} size="small" sx={{ mt: 0.5, fontWeight: 'bold' }} />
                     </Paper>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                     <Paper sx={{ p: 3, borderTop: '6px solid #000', borderRadius: 3 }}>
                         <Typography variant="overline" fontWeight="bold" color="textSecondary">Logged Time (month)</Typography>
                         <Typography variant="h3" fontWeight="950" sx={{ fontSize: '2rem' }}>{formatDuration(totalSec)}</Typography>
                         <Typography variant="caption" color="textSecondary">Total active time this month</Typography>
                     </Paper>
                 </Grid>
-                <Grid item xs={12} sm={4}>
+                <Grid size={{ xs: 12, sm: 4 }}>
                     <Paper sx={{ p: 3, borderTop: '6px solid #ffcc00', borderRadius: 3 }}>
                         <Typography variant="overline" fontWeight="bold" color="textSecondary">Tasks</Typography>
                         <Box display="flex" alignItems="baseline" gap={1}>
@@ -140,7 +138,7 @@ const EmployeeRiskProfile = () => {
 
             <Grid container spacing={3}>
                 {/* Attendance History */}
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Paper sx={{ p: 4, borderRadius: 3 }}>
                         <Typography variant="h6" fontWeight="950" gutterBottom>Attendance History</Typography>
                         <Box display="flex" gap={3} mb={3}>
@@ -182,7 +180,7 @@ const EmployeeRiskProfile = () => {
                                                     {log.checkOutReason || (log.checkOutTime ? 'End of Day' : '—')}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell>{log.hours !== '--' ? `${log.hours}h` : '—'}</TableCell>
+                                            <TableCell>{log.hours !== '--' ? formatHours(log.hours) : '—'}</TableCell>
                                             <TableCell>
                                                 <Chip
                                                     label={(log.status || 'present').toUpperCase()}
@@ -205,7 +203,7 @@ const EmployeeRiskProfile = () => {
                 </Grid>
 
                 {/* Activity & Pending Tasks */}
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Paper sx={{ p: 3, borderRadius: 3, mb: 3 }}>
                         <Typography variant="h6" fontWeight="950" gutterBottom>Recent Activity</Typography>
                         <List dense>

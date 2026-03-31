@@ -204,7 +204,7 @@ router.get('/hr', async (req, res) => {
     if (period !== 'today') {
       const riskMap = targetUsers.map(u => {
         // Productivity check for this user
-        const uActs = activities.filter(a => a.userId === u.id);
+        const uActs = allActivities.filter(a => a.userId === u.id);
         const uTotal = uActs.reduce((s, a) => s + (a.duration || 0), 0);
         const uProdDur = uActs.filter(a => a.classified === 'productive').reduce((s, a) => s + (a.duration || 0), 0);
         const prodScore = uTotal > 3600 ? Math.round((uProdDur / uTotal) * 100) : 100;

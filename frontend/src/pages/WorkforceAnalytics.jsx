@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import { formatDuration } from '../utils/timeFormat';
 import TrendingUp from '@mui/icons-material/TrendingUp';
 import Warning from '@mui/icons-material/Warning';
 import Business from '@mui/icons-material/Business';
@@ -49,13 +50,6 @@ const WorkforceAnalytics = () => {
 
     const displayData = viewMode === 'department' ? (analytics.departments || []) : (analytics.teams || []);
 
-    const formatDuration = (seconds) => {
-        if (!seconds || seconds <= 0) return '0m';
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
-        return `${m}m`;
-    };
 
     return (
         <Box>
