@@ -89,7 +89,7 @@ router.get('/:userId',
     validate
   ],
   async (req, res) => {
-    const tasks = await Task.find({ userId: req.params.userId }).sort({ due: 1 });
+    const tasks = await Task.find({ userId: new RegExp(`^${req.params.userId}$`, 'i') }).sort({ due: 1 });
     res.json(tasks);
   });
 

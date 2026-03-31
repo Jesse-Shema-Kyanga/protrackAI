@@ -15,6 +15,7 @@ import TrendingUp from '@mui/icons-material/TrendingUp';
 import Speed from '@mui/icons-material/Speed';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import { formatDuration, formatHours } from '../utils/timeFormat';
 
 const HRDashboard = () => {
     const { user } = useContext(AuthContext);
@@ -239,7 +240,7 @@ const HRDashboard = () => {
                                                     {team.attendance || 0}%
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell align="center" sx={{ fontWeight: '700' }}>{team.loggedHours}h</TableCell>
+                                            <TableCell align="center" sx={{ fontWeight: '700' }}>{formatDuration(team.totalDuration)}</TableCell>
                                             <TableCell align="right">
                                                 <Box display="flex" alignItems="center" justifyContent="flex-end" gap={1}>
                                                     <Box sx={{ width: 60, height: 8, bgcolor: 'action.hover', borderRadius: 4, overflow: 'hidden' }}>
@@ -287,7 +288,7 @@ const HRDashboard = () => {
                                 <ListItem key={i} sx={{ px: 0 }}>
                                     <ListItemText
                                         primary={app.name}
-                                        secondary={`${app.hours}h Logged - Policy Review Recommended`}
+                                        secondary={`${formatDuration(app.duration)} Logged - Policy Review Recommended`}
                                         primaryTypographyProps={{ fontWeight: 'bold' }}
                                     />
                                     <Warning color="error" fontSize="small" />

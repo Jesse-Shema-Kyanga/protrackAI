@@ -293,7 +293,7 @@ const getAttendance = async (req, res) => {
     });
 
     // Get REAL-TIME status (most recent log ever)
-    const latestRawLog = await TimeLog.findOne({ userId: matchQuery.userId || userId }).sort({ timestamp: -1 });
+    const latestRawLog = await TimeLog.findOne({ userId: new RegExp(`^${matchQuery.userId || userId}$`, 'i') }).sort({ timestamp: -1 });
 
     // Logic: If last log is not from today, reset to checked-out
     let realTimeStatus = 'check-out';

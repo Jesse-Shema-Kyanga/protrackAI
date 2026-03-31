@@ -194,7 +194,7 @@ router.get('/', async (req, res) => {
       else if (period === 'month') startDate.setMonth(now.getMonth() - 1);
     }
 
-    const activityMatch = { userId, timestamp: { $gte: startDate, $lte: endDate } };
+    const activityMatch = { userId: new RegExp(`^${userId}$`, 'i'), timestamp: { $gte: startDate, $lte: endDate } };
 
     const stats = await Activity.aggregate([
       { $match: activityMatch },
