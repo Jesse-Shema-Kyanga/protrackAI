@@ -33,7 +33,8 @@ const Login = () => {
             // Wait a moment for OS/Browser handoff before navigating
             setTimeout(() => {
                 const role = res.data.user.role;
-                if (role === 'hr') navigate('/hr-dashboard');
+                if (role === 'admin') navigate('/admin-dashboard');
+                else if (role === 'hr') navigate('/hr-dashboard');
                 else if (role === 'supervisor') navigate('/supervisor-dashboard');
                 else navigate('/employee-dashboard');
             }, 800);

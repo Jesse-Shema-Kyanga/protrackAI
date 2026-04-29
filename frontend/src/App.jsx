@@ -1,8 +1,17 @@
-import { useState, useMemo, createContext, useContext } from 'react';
+import { useState, useMemo, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import { Box, Typography, GlobalStyles } from '@mui/material';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { io } from 'socket.io-client';
+
 import AuthContext, { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
+import getTheme from './theme';
+import './App.css';
+
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import EmployeeDashboard from './pages/EmployeeDashboard';
@@ -21,29 +30,21 @@ import Profile from './pages/Profile';
 import LeaveManagement from './pages/LeaveManagement';
 import OrgManagement from './pages/OrgManagement';
 import EmployeeRiskProfile from './pages/EmployeeRiskProfile';
-import { Box, Typography, GlobalStyles } from '@mui/material';
-
-// Placeholder Pages (Remaining)
-const Placeholder = ({ title }) => <Box p={3}><Typography variant="h4">{title} 🚧</Typography></Box>;
-
-import { ThemeProvider } from '@mui/material/styles';
-import getTheme from './theme';
-import './App.css';
+import AdminDashboard from './pages/AdminDashboard';
 
 export const ColorModeContext = createContext({ toggleColorMode: () => { } });
 
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { io } from 'socket.io-client';
-import { useEffect } from 'react';
-
 // Socket instance
 const socket = io('http://localhost:5000');
+
+// Placeholder Pages (Remaining)
+const Placeholder = ({ title }) => <Box p={3}><Typography variant="h4">{title} 🚧</Typography></Box>;
 
 // Smart redirect based on role
 const RoleBasedRedirect = () => {
   const { user } = useContext(AuthContext);
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'admin') return <Navigate to="/admin-dashboard" replace />;
   if (user.role === 'hr') return <Navigate to="/hr-dashboard" replace />;
   if (user.role === 'supervisor') return <Navigate to="/supervisor-dashboard" replace />;
   return <Navigate to="/employee-dashboard" replace />;
@@ -120,11 +121,16 @@ function App() {
                     <Route path="/employee-risk/:userId" element={<EmployeeRiskProfile />} />
                   </Route>
 
+                  {/* Admin Only */}
+                  <Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>
+                    <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                    <Route path="/org-management" element={<OrgManagement />} />
+                  </Route>
+
                   {/* HR Only */}
                   <Route element={<RoleProtectedRoute allowedRoles={['hr']} />}>
                     <Route path="/hr-dashboard" element={<HRDashboard />} />
                     <Route path="/hr-analytics" element={<WorkforceAnalytics />} />
-                    <Route path="/org-management" element={<OrgManagement />} />
                     <Route path="/evaluations" element={<Feedback />} />
                   </Route>
 

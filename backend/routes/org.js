@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
 // HR Only: Add a department
 router.post('/departments', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const { name, description } = req.body;
         const newDept = await Organization.create({ name, description, teams: [] });
         res.json(newDept);
@@ -29,7 +29,7 @@ router.post('/departments', authMiddleware, async (req, res) => {
 // HR Only: Add a team to a department
 router.post('/teams', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const { deptName, teamName } = req.body;
         const dept = await Organization.findOne({ name: deptName });
         if (!dept) return res.status(404).json({ error: 'Department not found' });
@@ -47,7 +47,7 @@ router.post('/teams', authMiddleware, async (req, res) => {
 // HR Only: Delete a department
 router.delete('/departments/:name', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         await Organization.findOneAndDelete({ name: req.params.name });
         res.json({ message: 'Department deleted' });
     } catch (err) {
@@ -76,7 +76,7 @@ router.get('/metrics', authMiddleware, async (req, res) => {
 // HR Only: Rename a Team
 router.patch('/teams/rename', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const { deptName, oldName, newName } = req.body;
         const dept = await Organization.findOne({ name: deptName });
         if (!dept) return res.status(404).json({ error: 'Department not found' });
@@ -99,7 +99,7 @@ router.patch('/teams/rename', authMiddleware, async (req, res) => {
 // HR Only: Move a Team to another Department
 router.patch('/teams/move', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const { teamName, fromDept, toDept } = req.body;
 
         const source = await Organization.findOne({ name: fromDept });
@@ -125,7 +125,7 @@ router.patch('/teams/move', authMiddleware, async (req, res) => {
 // HR Only: Delete a Team
 router.delete('/teams/:deptName/:teamName', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const { deptName, teamName } = req.params;
         const dept = await Organization.findOne({ name: deptName });
         if (!dept) return res.status(404).json({ error: 'Department not found' });
@@ -145,7 +145,7 @@ router.delete('/teams/:deptName/:teamName', authMiddleware, async (req, res) => 
 // HR Only: Get all employees for reassignment
 router.get('/users', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const users = await User.find({ role: { $in: ['employee', 'supervisor'] } }).select('id name email role dept team');
         res.json(users);
     } catch (err) {
@@ -153,10 +153,10 @@ router.get('/users', authMiddleware, async (req, res) => {
     }
 });
 
-// HR Only: Reassign a User
+// Admin Only: Reassign a User
 router.patch('/users/:id/reassign', authMiddleware, async (req, res) => {
     try {
-        if (req.user.role !== 'hr') return res.status(403).json({ error: 'HR only' });
+        if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
         const { dept, team } = req.body;
         const user = await User.findOneAndUpdate({ id: req.params.id }, { $set: { dept, team } }, { new: true });
         res.json(user);

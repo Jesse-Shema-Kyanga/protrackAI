@@ -50,8 +50,8 @@ const SupervisorDashboard = () => {
             try {
                 const res = await axios.get(`/api/analytics/supervisor`, {
                     params: {
-                        supId: user?.id || user?.userId,
-                        team: user?.team,
+                        supId: user.id || user.userId,
+                        team: user.team,
                         period,
                         start: period === 'custom' ? startDate : undefined,
                         end: period === 'custom' ? endDate : undefined
@@ -124,7 +124,7 @@ const SupervisorDashboard = () => {
                     <Typography variant="h4" fontWeight="950" sx={{ letterSpacing: '-1.5px', textTransform: 'uppercase' }}>
                         Team <Box component="span" color="primary.main">Command</Box>
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">Operational Management for Unit: <strong>{user?.team || 'N/A'}</strong></Typography>
+                    <Typography variant="body2" color="textSecondary">Operational Management for Unit: <strong>{user.team}</strong></Typography>
                 </Box>
                 <Box display="flex" gap={2}>
                     <FormControl size="small" sx={{ minWidth: 160 }}>
@@ -172,9 +172,9 @@ const SupervisorDashboard = () => {
                             <Typography variant="overline" fontWeight="bold">Productivity</Typography>
                             <Speed color="primary" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics?.productivity || 0}%</Typography>
-                        <Typography variant="caption" color={(analytics?.productivityTrend || 0) >= 0 ? 'success.main' : 'error.main'} fontWeight="bold">
-                            {(analytics?.productivityTrend || 0) >= 0 ? '+' : ''}{analytics?.productivityTrend || 0}% vs Last Period
+                        <Typography variant="h3" fontWeight="950">{analytics.productivity}%</Typography>
+                        <Typography variant="caption" color={analytics.productivityTrend >= 0 ? 'success.main' : 'error.main'} fontWeight="bold">
+                            {analytics.productivityTrend >= 0 ? '+' : ''}{analytics.productivityTrend}% vs Last Period
                         </Typography>
                     </Paper>
                 </Grid>
@@ -185,7 +185,7 @@ const SupervisorDashboard = () => {
                             <AccessTime color="inherit" />
                         </Box>
                         <Typography variant="h3" fontWeight="950" sx={{ fontSize: { xs: '2rem', lg: '3rem' } }}>
-                            {formatDuration(analytics?.totalSeconds || (analytics?.totalHours || 0) * 3600)}
+                            {formatDuration(analytics.totalSeconds || analytics.totalHours * 3600)}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">Cumulative Team Output</Typography>
                     </Paper>
@@ -196,8 +196,8 @@ const SupervisorDashboard = () => {
                             <Typography variant="overline" fontWeight="bold">Completion</Typography>
                             <AssignmentTurnedIn color="primary" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics?.taskCompletion || 0}%</Typography>
-                        <Typography variant="caption" color="textSecondary">{analytics?.openTasks || 0} Active Tasks</Typography>
+                        <Typography variant="h3" fontWeight="950">{analytics.taskCompletion}%</Typography>
+                        <Typography variant="caption" color="textSecondary">{analytics.openTasks} Active Tasks</Typography>
                     </Paper>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -206,7 +206,7 @@ const SupervisorDashboard = () => {
                             <Typography variant="overline" fontWeight="bold">Attendance</Typography>
                             <Assessment color="inherit" />
                         </Box>
-                        <Typography variant="h3" fontWeight="950">{analytics?.attendance || 0}%</Typography>
+                        <Typography variant="h3" fontWeight="950">{analytics.attendance || 0}%</Typography>
                         <Typography variant="caption" color="textSecondary">Punctuality-Weighted Score</Typography>
                     </Paper>
                 </Grid>
@@ -256,7 +256,7 @@ const SupervisorDashboard = () => {
                                                             animation: u.liveStatus === 'check-in' ? 'pulse 2s infinite' : 'pulse-away 2s infinite'
                                                         }} />
                                                         <Typography variant="caption" fontWeight="bold" sx={{ color: u.liveStatus === 'check-in' ? '#4caf50' : '#ffc107', textTransform: 'uppercase' }}>
-                                                            {u.liveStatus === 'check-in' ? 'Checked In' : 'Away'}
+                                                            {u.liveStatus === 'check-in' ? 'Checked In' : (u.lastCheckOutReason && u.lastCheckOutReason !== 'Reason not provided' && u.lastCheckOutReason !== 'Active' ? u.lastCheckOutReason : 'Offline')}
                                                         </Typography>
                                                     </Box>
                                                 </TableCell>
@@ -300,8 +300,8 @@ const SupervisorDashboard = () => {
                         <Box display="flex" alignItems="center" gap={2} mt={1}>
                             <Star color="inherit" />
                             <Box>
-                                <Typography variant="h6" fontWeight="bold">{analytics?.topPerformer?.name || 'N/A'}</Typography>
-                                <Typography variant="body2">{analytics?.topPerformer?.prod || 0}% Efficiency</Typography>
+                                <Typography variant="h6" fontWeight="bold">{analytics.topPerformer.name}</Typography>
+                                <Typography variant="body2">{analytics.topPerformer.prod}% Efficiency</Typography>
                             </Box>
                         </Box>
                     </Paper>

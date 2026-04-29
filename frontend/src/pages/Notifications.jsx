@@ -53,7 +53,11 @@ const Notifications = () => {
 
     const markAllRead = async () => {
         try {
-            await axios.put('/api/notifications/mark-all-read', { userId: user.id });
+            await axios.put('/api/notifications/mark-all-read', {
+                userId: user.id,
+                team: user.team,
+                dept: user.dept
+            });
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             window.dispatchEvent(new Event('notification-update'));
         } catch (err) {

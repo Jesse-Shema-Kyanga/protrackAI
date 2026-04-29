@@ -54,6 +54,10 @@ const Layout = () => {
             { text: 'Reviews', icon: <Assignment />, path: '/feedback' },
             { text: 'AI Manager', icon: <Psychology />, path: '/ai-management' },
             { text: 'Leaves', icon: <DateRange />, path: '/leave' },
+        ],
+        admin: [
+            { text: 'User Management', icon: <Person />, path: '/admin-dashboard' },
+            { text: 'Org Architecture', icon: <Dashboard />, path: '/org-management' },
         ]
     };
 
@@ -85,7 +89,9 @@ const Layout = () => {
 
     // --- Notifications & Alerts Polling ---
     useEffect(() => {
-        if (!user) return;
+    if (!user) return;
+        // Admin has no operational notifications — skip all polling
+        if (user.role === 'admin') return;
 
         const checkNotifications = async () => {
             try {

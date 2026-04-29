@@ -1,12 +1,17 @@
 {
-  "Poptropica": {
-    "weight": -1,
-    "reason": "gem",
-    "addedAt": "2026-01-04T18:13:44.639Z"
-  },
   "Spotify": {
     "weight": 0,
-    "reason": "jus music",
-    "addedAt": "2026-01-04T18:13:57.627Z"
+    "reason": "It is just music",
+    "addedAt": "2026-03-31T12:22:08.096Z"
+  },
+  "yeller": {
+    "weight": -1,
+    "reason": "this is not for work",
+    "addedAt": "2026-04-20T03:13:20.602Z"
+  },
+  "youtube tutorial": {
+    "weight": -1,
+    "reason": "don't use youtube at all",
+    "addedAt": "2026-04-20T08:57:36.919Z"
   }
 }

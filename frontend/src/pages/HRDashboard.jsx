@@ -123,7 +123,7 @@ const HRDashboard = () => {
             {(analytics.underperforming?.length > 0) && (
                 <Alert severity="error" sx={{ mb: 4, borderRadius: 2, border: '1px solid #f44336' }}>
                     <AlertTitle sx={{ fontWeight: 'bold' }}>Workforce Performance Risk Detected</AlertTitle>
-                    {analytics.underperforming.length} employee{analytics.underperforming.length > 1 ? 's are' : ' is'} currently flagged for productivity below 50%. Review the full roster under <strong>Reports &amp; Analytics</strong>.
+                    {analytics.underperforming.length} employee{analytics.underperforming.length > 1 ? 's are' : ' is'} currently flagged for performance risks (productivity or attendance below 50%). Review the full roster under <strong>Reports &amp; Analytics</strong>.
                 </Alert>
             )}
 

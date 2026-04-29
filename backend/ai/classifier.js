@@ -761,10 +761,14 @@ class ActivityClassifier {
             // ==========================================
             // LAYER 0: Weighted Rules (User/Supervisor Overrides)
             // ==========================================
+            // Sort rules by domain length descending so "spotify.com" matches before "spotify"
+            const sortedRuleKeys = Object.keys(this.weightedRules).sort((a, b) => b.length - a.length);
 
-            for (const [domain, rule] of Object.entries(this.weightedRules)) {
+            for (const domain of sortedRuleKeys) {
                 if (lower.includes(domain.toLowerCase())) {
+                    const rule = this.weightedRules[domain];
                     const cat = rule.weight === 1 ? 'productive' : (rule.weight === -1 ? 'non-productive' : 'neutral');
+                    console.log(`[AI RULE] "${text.substring(0, 60)}..." → [${cat}] (100% - Custom rule: ${domain})`);
                     return { category: cat, confidence: 1.0, reason: `Custom rule: ${domain}` };
                 }
             }

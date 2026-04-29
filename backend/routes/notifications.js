@@ -15,6 +15,9 @@ router.get('/', async (req, res) => {
         const currentUserId = req.user.userId || userId;
         const currentRole = req.user.role || role;
 
+        // Admin is a system role — no operational notifications apply
+        if (currentRole === 'admin') return res.json([]);
+
         if (currentRole === 'employee') {
             query.userId = currentUserId;
             query.targetRoleId = 'employee';
@@ -64,6 +67,9 @@ router.get('/unread-count', async (req, res) => {
         const currentUserId = req.user.userId || userId;
         const currentRole = req.user.role || role;
 
+        // Admin has no operational notifications
+        if (currentRole === 'admin') return res.json({ count: 0 });
+
         if (currentRole === 'employee') {
             query.userId = currentUserId;
             query.targetRoleId = 'employee';
@@ -88,15 +94,35 @@ router.get('/unread-count', async (req, res) => {
     }
 });
 
-// Mark ALL notifications as read for a user
+// Mark ALL notifications as read for a user (same scope as the GET endpoint)
 router.put('/mark-all-read', async (req, res) => {
     try {
-        const { userId } = req.body;
-        // In a real app, we'd use the session user, but query param/body works for now
-        // Better: use req.user.userId from authMiddleware
-        const targetId = req.user?.userId || userId;
+        const currentUserId = req.user?.userId;
+        const currentRole   = req.user?.role;
+        const { team, dept } = req.body;
 
-        await Notification.updateMany({ userId: targetId, read: false }, { read: true });
+        let query = { read: false };
+
+        if (currentRole === 'employee') {
+            query.userId = currentUserId;
+            query.targetRoleId = 'employee';
+        } else if (currentRole === 'supervisor') {
+            query.$or = [
+                { targetRoleId: 'supervisor', team },
+                { userId: currentUserId, targetRoleId: { $in: ['supervisor', 'employee'] } }
+            ];
+        } else if (currentRole === 'hr') {
+            query.$or = [
+                { targetRoleId: 'hr' },
+                { userId: currentUserId, targetRoleId: 'hr' }
+            ];
+            if (dept) query.$or[0].dept = dept;
+        } else {
+            // admin or unknown — mark personal ones only
+            query.userId = currentUserId;
+        }
+
+        await Notification.updateMany(query, { read: true });
         res.json({ success: true, message: 'All marked as read' });
     } catch (err) {
         res.status(500).json({ error: err.message });

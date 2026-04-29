@@ -57,8 +57,8 @@ const OrgManagement = () => {
     };
 
     useEffect(() => {
-        if (user?.role !== 'hr') {
-            navigate('/dashboard');
+        if (user?.role !== 'admin') {
+            navigate('/');
             return;
         }
         fetchData();
@@ -162,10 +162,7 @@ const OrgManagement = () => {
                     </Typography>
                     <Typography variant="body2" color="textSecondary">Executive Corporate Structure & Roster Management</Typography>
                 </Box>
-                <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Tab label="Core Architecture" sx={{ fontWeight: 'bold' }} />
-                    <Tab label="Staff Roster" sx={{ fontWeight: 'bold' }} />
-                </Tabs>
+                <Chip label="Core Architecture" color="primary" sx={{ fontWeight: 'bold', fontSize: '1rem', py: 2 }} />
             </Box>
 
             {tab === 0 && (
@@ -255,45 +252,7 @@ const OrgManagement = () => {
                 </>
             )}
 
-            {tab === 1 && (
-                <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: 3 }}>
-                    <Table>
-                        <TableHead sx={{ bgcolor: 'primary.main' }}>
-                            <TableRow>
-                                <TableCell sx={{ color: 'black', fontWeight: 'bold' }}>Staff Name</TableCell>
-                                <TableCell sx={{ color: 'black', fontWeight: 'bold' }}>Current Dept</TableCell>
-                                <TableCell sx={{ color: 'black', fontWeight: 'bold' }}>Current Team</TableCell>
-                                <TableCell sx={{ color: 'black', fontWeight: 'bold' }}>Role</TableCell>
-                                <TableCell align="right" sx={{ color: 'black', fontWeight: 'bold' }}>Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {users.map((u) => (
-                                <TableRow key={u.id} hover>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>{u.name}</TableCell>
-                                    <TableCell><Chip label={u.dept || 'UNASSIGNED'} size="small" /></TableCell>
-                                    <TableCell><Chip label={u.team || 'UNASSIGNED'} size="small" variant="outlined" /></TableCell>
-                                    <TableCell sx={{ textTransform: 'capitalize' }}>{u.role}</TableCell>
-                                    <TableCell align="right">
-                                        <Button
-                                            startIcon={<People />}
-                                            variant="outlined"
-                                            size="small"
-                                            onClick={() => {
-                                                setAssignData({ userId: u.id, userName: u.name, dept: u.dept || '', team: u.team || '' });
-                                                setOpenAssign(true);
-                                            }}
-                                            sx={{ fontWeight: 'bold', borderRadius: 2 }}
-                                        >
-                                            Reassign
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            )}
+            {/* Staff Roster was moved to the Admin Dashboard */}
 
             {/* MODALS */}
             <Dialog open={openDept} onClose={() => setOpenDept(false)} fullWidth maxWidth="xs">

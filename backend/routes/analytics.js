@@ -218,7 +218,16 @@ router.get('/hr', async (req, res) => {
           if (log && log.status === 'present') uPoints += 100;
           else if (log && log.status === 'late') uPoints += 70;
         });
-        const attScore = adjustedOrgExpected > 0 ? Math.min(100, Math.round(uPoints / adjustedOrgExpected)) : 100;
+        
+        const uLeaves = allApprovedLeaves.filter(l => l.userId === u.id);
+        let uOverlap = 0;
+        uLeaves.forEach(l => {
+          const os = new Date(Math.max(new Date(l.startDate), startDate));
+          const oe = new Date(Math.min(new Date(l.endDate), endDate));
+          if (os <= oe) uOverlap += getWorkingDays(os, oe);
+        });
+        const uExpected = Math.max(1, workingDays - uOverlap);
+        const attScore = Math.min(100, Math.round(uPoints / uExpected));
 
         let riskType = null;
         let finalScore = 0;

@@ -99,7 +99,7 @@ const EmployeeDashboard = () => {
     const efficiency = data.report.efficiency || '0%';
     const effNum = parseInt(efficiency) || 0;
     const totalSec = data.report.totalTime || 0;
-    const tasksToday = (data.tasks || []).filter(t => t.completed && t.timestamp && t.timestamp.startsWith(new Date().toISOString().split('T')[0])).length;
+    const tasksCompleted = (data.tasks || []).filter(t => t.completed).length;
     const tasksPending = (data.tasks || []).filter(t => !t.completed).length;
     const attendanceRate = data.attendance?.metrics?.attendanceRate || 0;
     const reliabilityScore = data.attendance?.metrics?.attendanceRate || 0; // Merged as per abstraction
@@ -242,10 +242,10 @@ const EmployeeDashboard = () => {
                     <Paper sx={{ p: 3, borderBottom: '6px solid #ffcc00', borderRadius: 2, height: '100%' }}>
                         <Typography variant="h6" color="textSecondary" gutterBottom>Task Completion</Typography>
                         <Box display="flex" alignItems="baseline" gap={1}>
-                            <Typography variant="h2" fontWeight="900">{tasksToday}</Typography>
-                            <Typography variant="h5" color="textSecondary">/ {tasksToday + tasksPending}</Typography>
+                            <Typography variant="h2" fontWeight="900">{tasksCompleted}</Typography>
+                            <Typography variant="h5" color="textSecondary">/ {tasksCompleted + tasksPending}</Typography>
                         </Box>
-                        <Typography variant="caption" color="textSecondary">Tasks completed today</Typography>
+                        <Typography variant="caption" color="textSecondary">Completed vs Pending Tasks</Typography>
                     </Paper>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6, md: 3 }}>

@@ -65,7 +65,7 @@ router.post('/signup',
     body('name').notEmpty().withMessage('Name is required').trim(),
     body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
-    body('role').isIn(['employee', 'supervisor', 'hr']).withMessage('Invalid role'),
+    body('role').optional().isIn(['employee', 'supervisor', 'hr', 'admin']).withMessage('Invalid role'),
     validate
   ],
   async (req, res) => {
@@ -80,7 +80,8 @@ router.post('/signup',
       }
 
       // Create new user (password will be hashed by pre-save hook)
-      const newUser = new User({ id, name, email, password, role, team, dept, pos });
+      const assignedRole = role || 'employee';
+      const newUser = new User({ id, name, email, password, role: assignedRole, team, dept, pos });
       await newUser.save();
 
       res.json({ success: true, message: 'User created successfully' });

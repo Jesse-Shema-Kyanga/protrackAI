@@ -16,33 +16,13 @@ const Signup = () => {
         dept: '',
         pos: ''
     });
-    const [departments, setDepartments] = useState([]);
-    const [availableTeams, setAvailableTeams] = useState([]);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchOrgs = async () => {
-            try {
-                const res = await axios.get('/api/org');
-                setDepartments(res.data);
-            } catch (err) {
-                console.error("Failed to fetch org structure:", err);
-            }
-        };
-        fetchOrgs();
-    }, []);
-
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
-
-        if (name === 'dept') {
-            const selectedDept = departments.find(d => d.name === value);
-            setAvailableTeams(selectedDept ? selectedDept.teams : []);
-            setFormData(prev => ({ ...prev, team: '' }));
-        }
     };
 
     const handleSubmit = async (e) => {
@@ -161,76 +141,7 @@ const Signup = () => {
                                 value={formData.password}
                                 onChange={handleChange}
                             />
-                            <TextField
-                                select
-                                margin="dense"
-                                required
-                                fullWidth
-                                name="role"
-                                label="Select Your Role"
-                                variant="filled"
-                                InputProps={{ disableUnderline: true, sx: { borderRadius: 1, bgcolor: '#2c313c', color: '#fff' } }}
-                                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.5)' } }}
-                                value={formData.role}
-                                onChange={handleChange}
-                            >
-                                <MenuItem value="employee">Employee</MenuItem>
-                                <MenuItem value="supervisor">Supervisor</MenuItem>
-                                <MenuItem value="hr">HR Manager</MenuItem>
-                            </TextField>
-
-                            <TextField
-                                select
-                                margin="dense"
-                                required
-                                fullWidth
-                                name="dept"
-                                label="Department"
-                                variant="filled"
-                                InputProps={{ disableUnderline: true, sx: { borderRadius: 1, bgcolor: '#2c313c', color: '#fff' } }}
-                                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.5)' } }}
-                                value={formData.dept}
-                                onChange={handleChange}
-                            >
-                                {departments.map((d) => (
-                                    <MenuItem key={d._id} value={d.name}>{d.name}</MenuItem>
-                                ))}
-                                {departments.length === 0 && <MenuItem disabled>Loading departments...</MenuItem>}
-                            </TextField>
-
-                            <TextField
-                                margin="dense"
-                                fullWidth
-                                name="pos"
-                                label="Job Position"
-                                placeholder="e.g. Senior Network Engineer"
-                                variant="filled"
-                                InputProps={{ disableUnderline: true, sx: { borderRadius: 1, bgcolor: '#2c313c', color: '#fff' } }}
-                                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.5)' } }}
-                                value={formData.pos}
-                                onChange={handleChange}
-                            />
-
-                            {formData.role !== 'hr' && formData.dept && (
-                                <TextField
-                                    select
-                                    margin="dense"
-                                    required
-                                    fullWidth
-                                    name="team"
-                                    label={formData.role === 'supervisor' ? "Supervising Team" : "Join a Team"}
-                                    variant="filled"
-                                    InputProps={{ disableUnderline: true, sx: { borderRadius: 1, bgcolor: '#2c313c', color: '#fff' } }}
-                                    InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.5)' } }}
-                                    value={formData.team}
-                                    onChange={handleChange}
-                                >
-                                    {availableTeams.map((t, i) => (
-                                        <MenuItem key={i} value={t}>{t}</MenuItem>
-                                    ))}
-                                    {availableTeams.length === 0 && <MenuItem disabled>No teams in this dept</MenuItem>}
-                                </TextField>
-                            )}
+                            {/* Roles & Teams will be assigned by Administrator */}
 
                             <Button
                                 type="submit"

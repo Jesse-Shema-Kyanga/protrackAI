@@ -150,7 +150,7 @@ const Tasks = () => {
 
                         <TableContainer>
                             <Table>
-                                <TableHead sx={{ bgcolor: '#f8f9fa' }}>
+                                <TableHead sx={{ bgcolor: 'action.hover' }}>
                                     <TableRow>
                                         <TableCell sx={{ fontWeight: 'bold' }}>Objective</TableCell>
                                         {user.role === 'supervisor' && <TableCell sx={{ fontWeight: 'bold' }}>Assigned To</TableCell>}

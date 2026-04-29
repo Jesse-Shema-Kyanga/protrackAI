@@ -35,7 +35,8 @@ router.get('/', async (req, res) => {
   if (role) query.role = role;
   const users = await User.find(query).select('id name email dept role team');
   // Only filter out filters if specifically asking for employees, otherwise unexpected behavior
-  if (role === 'employee') {
+  // Admin needs to see all users; otherwise, filter out supervisors for regular team views
+  if (req.user.role === 'admin' || role === 'employee' || role === 'hr') {
     res.json(users);
   } else {
     res.json(users.filter(u => u.role !== 'supervisor'));
@@ -68,7 +69,7 @@ router.put('/:id',
   async (req, res) => {
     try {
       const oldId = req.params.id;
-      const { name, email, id: newId, team, dept, pos } = req.body;
+      const { name, email, id: newId, team, dept, pos, role } = req.body;
 
       const updates = {};
       if (name) updates.name = name;
@@ -78,6 +79,10 @@ router.put('/:id',
       if (dept) updates.dept = dept;
       if (pos) updates.pos = pos;
       if (req.body.avatar) updates.avatar = req.body.avatar;
+
+      if (role && req.user.role === 'admin') {
+          updates.role = role;
+      }
 
       const user = await User.findOneAndUpdate({ id: oldId }, updates, { new: true });
       if (!user) return res.status(404).json({ error: 'User not found' });
@@ -96,6 +101,26 @@ router.put('/:id',
       res.json(user);
     } catch (err) {
       console.error('Update User Error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+// ---------------------------------------------------------
+// Delete User (Admin Only)
+// ---------------------------------------------------------
+router.delete('/:id',
+  [
+    param('id').notEmpty().withMessage('User ID is required'),
+    validate
+  ],
+  async (req, res) => {
+    try {
+      if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      const user = await User.findOneAndDelete({ id: req.params.id });
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      res.json({ message: 'User deleted successfully' });
+    } catch (err) {
+      console.error('Delete User Error:', err);
       res.status(500).json({ error: err.message });
     }
   });
