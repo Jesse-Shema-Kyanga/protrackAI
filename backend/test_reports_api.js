@@ -1,8 +1,9 @@
+require('dotenv').config({ path: './.env' });
 const mongoose = require('mongoose');
 
 async function testApi() {
   try {
-    await mongoose.connect('mongodb+srv://jesse:onthemoon@protrackai.ime7ent.mongodb.net/protrackai');
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
 
     const Activity = mongoose.model('Activity', new mongoose.Schema({ userId: String, timestamp: Date, classified: String, duration: Number }));

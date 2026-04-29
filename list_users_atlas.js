@@ -1,8 +1,9 @@
+require('dotenv').config({ path: './backend/.env' });
 const mongoose = require('mongoose');
 
 async function listUsers() {
   try {
-    await mongoose.connect('mongodb+srv://jesse:onthemoon@protrackai.ime7ent.mongodb.net/protrackai');
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
 
     const User = mongoose.model('User', new mongoose.Schema({ id: String, name: String, role: String, team: String }));

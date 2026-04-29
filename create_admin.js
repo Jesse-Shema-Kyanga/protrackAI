@@ -1,9 +1,9 @@
+require('dotenv').config({ path: './backend/.env' });
 const mongoose = require('mongoose');
-const User = require('./backend/models/User');
 
 async function createAdmin() {
   try {
-    await mongoose.connect('mongodb+srv://jesse:onthemoon@protrackai.ime7ent.mongodb.net/protrackai');
+    await mongoose.connect(process.env.MONGO_URI);
     console.log('Connected to MongoDB');
 
     let admin = await User.findOne({ email: 'admin@mtn.co.rw' });
