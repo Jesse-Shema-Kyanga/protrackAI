@@ -267,8 +267,12 @@ router.get('/pdf', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=Audit_${user.name.replace(/\s+/g, '_')}_${period}_${reportType}.pdf`);
     doc.pipe(res);
 
-    const title = reportType.toUpperCase() + ' PERFORMANCE RECORD';
-    await drawCover(doc, title, `Employee: ${user.name} (${userId})`, `Period: ${period.toUpperCase()} Audit Document`);
+    const title = reportType === 'violation' ? 'POLICY VIOLATIONS RECORD' : reportType.toUpperCase() + ' PERFORMANCE RECORD';
+    let periodStr = period.toUpperCase();
+    if (period === 'custom') {
+      periodStr = `CUSTOM (${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]})`;
+    }
+    await drawCover(doc, title, `Employee: ${user.name} (${userId})`, `Period: ${periodStr} Audit Document`);
 
     let y = 110;
 
@@ -310,6 +314,48 @@ router.get('/pdf', async (req, res) => {
             { colW: [0, 30, 110, 200, 290, 380] },
             y
         );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // VIOLATIONS REALM (Individual)
+    // ──────────────────────────────────────────────────────────────────────────
+    if (reportType === 'all' || reportType === 'violation') {
+        const lateLogs = timeLogs.filter(l => l.type === 'check-in' && l.status === 'late');
+        const totalDur = activities.reduce((s, a) => s + (a.duration || 0), 0);
+        const prodDur = activities.filter(a => a.classified === 'productive').reduce((s, a) => s + (a.duration || 0), 0);
+        const ratio = totalDur > 0 ? Math.round((prodDur / totalDur) * 100) : 0;
+        
+        if (reportType === 'violation' || lateLogs.length > 2 || ratio < 60) {
+            y = drawSectionHeader(doc, 'Policy Violations & Warnings', y);
+            
+            const infractions = [];
+            if (lateLogs.length > 2) infractions.push(`Chronic Tardiness: Arrived late ${lateLogs.length} times in this period.`);
+            if (ratio > 0 && ratio < 60) infractions.push(`Low Productivity: Efficiency ratio is ${ratio}%. Well below the 70% minimum threshold.`);
+            
+            if (infractions.length === 0 && reportType === 'violation') {
+                infractions.push('No obvious systemic violations detected in this period.');
+            }
+
+            y = drawSummaryHeader(doc, infractions.map((inf, idx) => ({ label: `Warning ${idx + 1}`, value: inf })), y);
+            
+            const nprdActivities = aggregateByDomain(activities.filter(a => a.classified === 'non-productive'));
+            const violatorRows = nprdActivities.slice(0, 5).map((d, i) => [
+                '#' + (i + 1),
+                d.domain,
+                'UNAUTHORIZED/DISTRACTION',
+                formatDuration(d.totalDuration),
+                Math.round(d.percent) + '%'
+            ]);
+
+            if (violatorRows.length > 0) {
+                y = drawTable(doc,
+                    ['SN', 'Non-Productive Domain', 'Flag Type', 'Time Lost', 'Share %'],
+                    violatorRows,
+                    { colW: [0, 30, 240, 350, 440] },
+                    y
+                );
+            }
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -369,11 +415,18 @@ router.get('/team-pdf', async (req, res) => {
     const memberIds = members.map(m => m.id);
 
     const now = new Date();
-    const endDate = new Date();
+    let endDate = new Date();
     let startDate = new Date();
-    if (period === 'week') startDate.setDate(now.getDate() - 7);
-    else if (period === 'month') startDate.setTime(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    else startDate.setHours(0, 0, 0, 0);
+    if (period === 'custom' && req.query.start && req.query.end) {
+      startDate = new Date(req.query.start);
+      endDate.setTime(new Date(req.query.end).setHours(23, 59, 59, 999));
+    } else if (period === 'week') {
+      startDate.setDate(now.getDate() - 7);
+    } else if (period === 'month') {
+      startDate.setTime(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else {
+      startDate.setHours(0, 0, 0, 0);
+    }
 
     const activities = await Activity.find({ userId: { $in: memberIds }, timestamp: { $gte: startDate, $lte: endDate } });
     const logs = await TimeLog.find({ userId: { $in: memberIds }, timestamp: { $gte: startDate, $lte: endDate }, type: 'check-in' });
@@ -385,8 +438,14 @@ router.get('/team-pdf', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=MTN_Team_${typeLabel}_Audit_${team}_${period}_${dateStr}.pdf`);
     doc.pipe(res);
 
-    const coverTitle = reportType === 'attendance' ? 'TEAM ATTENDANCE AUDIT' : reportType === 'productivity' ? 'TEAM PRODUCTIVITY AUDIT' : 'TEAM OPERATIONAL AUDIT';
-    await drawCover(doc, coverTitle, `Unit: ${team} | Supervisor: ${supervisor.name}`, `Period: ${period.toUpperCase()} | Generated: ${dateStr}`);
+    const coverTitle = reportType === 'attendance' ? 'TEAM ATTENDANCE AUDIT' : reportType === 'productivity' ? 'TEAM PRODUCTIVITY AUDIT' : reportType === 'violation' ? 'TEAM VIOLATIONS REPORT' : 'TEAM OPERATIONAL AUDIT';
+    
+    let periodStr = period.toUpperCase();
+    if (period === 'custom') {
+      periodStr = `CUSTOM (${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]})`;
+    }
+    
+    await drawCover(doc, coverTitle, `Unit: ${team} | Supervisor: ${supervisor.name}`, `Period: ${periodStr} | Generated: ${dateStr}`);
 
     let y = 110;
 
@@ -465,6 +524,54 @@ router.get('/team-pdf', async (req, res) => {
         );
     }
 
+    // ── VIOLATIONS REPORT ─────────────────────────────────────────────────────
+    if (reportType === 'violation') {
+        const violatorRows = [];
+        members.forEach((m, i) => {
+            const uL = logs.filter(l => l.userId === m.id);
+            const late = uL.filter(l => l.status === 'late').length;
+            const uA = activities.filter(a => a.userId === m.id);
+            const tot = uA.reduce((s,a) => s + (a.duration || 0), 0);
+            const prd = uA.filter(a => a.classified === 'productive').reduce((s,a) => s + (a.duration || 0), 0);
+            const eff = tot > 0 ? Math.round((prd / tot) * 100) : 0;
+            
+            // Criteria: More than 2 lates or efficiency less than 60%
+            if (late > 2 || (tot > 3600 && eff < 60)) {
+                let reason = [];
+                if (late > 2) reason.push(`Chronic Late (${late}x)`);
+                if (tot > 3600 && eff < 60) reason.push(`Low Prod (${eff}%)`);
+                
+                violatorRows.push([
+                    '#' + (violatorRows.length + 1),
+                    m.name.length > 20 ? m.name.slice(0, 18) + '...' : m.name,
+                    String(late),
+                    eff + '%',
+                    reason.join(' | '),
+                    { text: 'AT RISK', color: RED, bold: true }
+                ]);
+            }
+        });
+
+        y = drawSectionHeader(doc, 'System Violators Roster', y);
+        y = drawSummaryHeader(doc, [
+            { label: 'Total Audited', value: String(members.length) },
+            { label: 'Violators Found', value: String(violatorRows.length) },
+            { label: 'Compliance Level', value: members.length > 0 ? Math.round(((members.length - violatorRows.length) / members.length) * 100) + '%' : '0%' }
+        ], y);
+
+        if (violatorRows.length > 0) {
+            y = drawTable(doc,
+                ['SN', 'Employee Name', 'Late Flags', 'Efficiency', 'Primary Infraction', 'Status'],
+                violatorRows,
+                { colW: [0, 30, 175, 250, 320, 440] },
+                y
+            );
+        } else {
+            doc.fontSize(10).font('Helvetica-Bold').fillColor(DARK).text('No violations detected in this period.', L, y + 20);
+            y += 40;
+        }
+    }
+
     drawFooter(doc, now.toLocaleString());
     drawSignaturePage(doc, supervisor.name, now);
     doc.end();
@@ -485,11 +592,18 @@ router.get('/hr-pdf', async (req, res) => {
 
     const hrUser = await User.findOne({ id: req.user.id });
     const now = new Date();
-    const endDate = new Date();
+    let endDate = new Date();
     let startDate = new Date();
-    if (period === 'week') startDate.setDate(now.getDate() - 7);
-    else if (period === 'month') startDate.setTime(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    else startDate.setHours(0, 0, 0, 0); // 'today'
+    if (period === 'custom' && req.query.start && req.query.end) {
+      startDate = new Date(req.query.start);
+      endDate.setTime(new Date(req.query.end).setHours(23, 59, 59, 999));
+    } else if (period === 'week') {
+      startDate.setDate(now.getDate() - 7);
+    } else if (period === 'month') {
+      startDate.setTime(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else {
+      startDate.setHours(0, 0, 0, 0); // 'today'
+    }
 
     const users = await User.find({ role: 'employee' }).select('id name dept team');
     const userIds = users.map(u => u.id);
@@ -502,8 +616,12 @@ router.get('/hr-pdf', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=MTN_Workforce_Audit_${viewMode.toUpperCase()}_${period}_${reportType}_${hrDateStr}.pdf`);
     doc.pipe(res);
 
-    const titlePrefix = reportType === 'attendance' ? 'ATTENDANCE' : reportType === 'productivity' ? 'PRODUCTIVITY' : 'WORKFORCE';
-    await drawCover(doc, `${titlePrefix} CAPACITY AUDIT`, `Organization-Wide ${viewMode === 'team' ? 'Team' : 'Departmental'} Analysis`, `Period: ${period.toUpperCase()}`);
+    const titlePrefix = reportType === 'attendance' ? 'ATTENDANCE' : reportType === 'productivity' ? 'PRODUCTIVITY' : reportType === 'violation' ? 'VIOLATIONS' : 'WORKFORCE';
+    let periodStr = period.toUpperCase();
+    if (period === 'custom') {
+      periodStr = `CUSTOM (${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]})`;
+    }
+    await drawCover(doc, `${titlePrefix} CAPACITY AUDIT`, `Organization-Wide ${viewMode === 'team' ? 'Team' : 'Departmental'} Analysis`, `Period: ${periodStr}`);
 
     let y = 110;
 

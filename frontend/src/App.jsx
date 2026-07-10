@@ -11,6 +11,7 @@ import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 import getTheme from './theme';
 import './App.css';
+import API_BASE_URL from './utils/api';
 
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -34,8 +35,8 @@ import AdminDashboard from './pages/AdminDashboard';
 
 export const ColorModeContext = createContext({ toggleColorMode: () => { } });
 
-// Socket instance
-const socket = io('http://localhost:5000');
+// Socket instance — uses VITE_API_URL in production, empty string (same-origin proxy) in dev
+const socket = io(API_BASE_URL || window.location.origin);
 
 // Placeholder Pages (Remaining)
 const Placeholder = ({ title }) => <Box p={3}><Typography variant="h4">{title} 🚧</Typography></Box>;

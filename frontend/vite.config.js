@@ -10,6 +10,7 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', '@emotion/react', '@emotion/styled', '@mui/material']
   },
+  // Dev-only: proxy /api calls to the local backend
   server: {
     proxy: {
       '/api': {
@@ -17,6 +18,15 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/uploads': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
+  build: {
+    sourcemap: false,
+  },
 })
+

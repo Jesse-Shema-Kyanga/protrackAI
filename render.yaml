@@ -1,0 +1,22 @@
+# render.yaml — Auto-deploy configuration for Render.com
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: protrackai-backend
+    runtime: node
+    rootDir: .
+    buildCommand: npm install
+    startCommand: node backend/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false   # Set this manually in Render dashboard (keep secret)
+      - key: JWT_SECRET
+        sync: false   # Set this manually in Render dashboard (keep secret)
+      - key: FRONTEND_URL
+        sync: false   # Set to your Vercel URL after deploying frontend
+    healthCheckPath: /

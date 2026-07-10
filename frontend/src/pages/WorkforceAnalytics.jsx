@@ -94,6 +94,7 @@ const WorkforceAnalytics = () => {
                             <MenuItem value="all">Full Report</MenuItem>
                             <MenuItem value="attendance">Attendance</MenuItem>
                             <MenuItem value="productivity">Productivity</MenuItem>
+                            <MenuItem value="violation">Violations (At-Risk)</MenuItem>
                         </Select>
                     </FormControl>
                     <Button

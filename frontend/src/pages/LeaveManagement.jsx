@@ -271,7 +271,7 @@ const LeaveManagement = () => {
                                             <TableCell>{l.reason || '--'}</TableCell>
                                             <TableCell>
                                                 {l.proofDocument ? (
-                                                    <Button size="small" variant="outlined" href={`http://localhost:5000${l.proofDocument}`} target="_blank">
+                                                    <Button size="small" variant="outlined" href={`${import.meta.env.VITE_API_URL || ''}${l.proofDocument}`} target="_blank">
                                                         View Note
                                                     </Button>
                                                 ) : '--'}

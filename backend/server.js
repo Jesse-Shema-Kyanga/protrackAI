@@ -37,22 +37,24 @@ app.use(express.json({ limit: '10mb' }));
 // 1. Database Connection (Standard Singleton)
 // connectDB() is called inside startServer() below to ensure sequence.
 
-// API Routes with explicit logging for troubleshooting
-const fs = require('fs');
+// API Routes with logging (file logging only in development to avoid issues on ephemeral cloud filesystems)
 const path = require('path');
-const debugLogPath = path.join(__dirname, 'debug_api.log');
 
-app.use((req, res, next) => {
-    const start = Date.now();
-    const originalJson = res.json;
-    res.json = function (data) {
-        const duration = Date.now() - start;
-        const logMsg = `\n[${new Date().toISOString()}] ${req.method} ${req.url} - Duration: ${duration}ms\nResponse: ${JSON.stringify(data).substring(0, 500)}\n`;
-        fs.appendFileSync(debugLogPath, logMsg);
-        return originalJson.call(this, data);
-    };
-    next();
-});
+if (process.env.NODE_ENV !== 'production') {
+    const fs = require('fs');
+    const debugLogPath = path.join(__dirname, 'debug_api.log');
+    app.use((req, res, next) => {
+        const start = Date.now();
+        const originalJson = res.json;
+        res.json = function (data) {
+            const duration = Date.now() - start;
+            const logMsg = `\n[${new Date().toISOString()}] ${req.method} ${req.url} - Duration: ${duration}ms\nResponse: ${JSON.stringify(data).substring(0, 500)}\n`;
+            fs.appendFileSync(debugLogPath, logMsg);
+            return originalJson.call(this, data);
+        };
+        next();
+    });
+}
 
 app.get('/', (req, res) => res.send('ProTrackAI Backend Live! 🚀'));
 

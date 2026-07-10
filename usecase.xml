@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
+  <root>
+    <mxCell id="0" /><mxCell id="1" parent="0" />
+
+    <!-- System Boundary -->
+    <mxCell id="box" value="ProtrackAI System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#000000;fontSize=16;fontStyle=1;verticalAlign=top;arcSize=0;" vertex="1" parent="1">
+      <mxGeometry x="190" y="30" width="770" height="1280" as="geometry" />
+    </mxCell>
+
+    <!-- USE CASES -->
+    <mxCell id="UC1"  value="Log In / Register"                         style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="80"   width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC2"  value="Update Profile &amp; Password"             style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="135"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC3"  value="View Notifications"                        style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="190"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC4"  value="Manage User Accounts"                      style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="270"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC5"  value="Manage Org Structure (Depts &amp; Teams)"  style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="325"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC6"  value="View System KPI Overview"                  style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="380"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC7"  value="View Workforce Intelligence"               style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="460"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC8"  value="Export Workforce Audit PDF"                style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="515"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC9"  value="Review &amp; Rate Performance Evaluations" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="570"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC10" value="Manage Leave Requests"                     style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="625"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC11" value="View Team Dashboard &amp; Attendance"      style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="705"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC12" value="Assign Tasks &amp; Goals to Employees"     style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="760"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC13" value="View Activity Analytics &amp; Risk Profile" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="815"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC14" value="Override AI &amp; Manage Classifier Rules" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="870"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC15" value="Export Team / Violations PDF"              style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="925"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC16" value="Submit Feedback for Employee"              style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="980"  width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC17" value="Clock In / Clock Out"                      style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="1060" width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC18" value="Update Task &amp; Goal Progress"           style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="1115" width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC19" value="Submit Self-Evaluation &amp; Leave Request" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="1170" width="240" height="40" as="geometry" /></mxCell>
+    <mxCell id="UC20" value="Download Own Activity Report"              style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=11;" vertex="1" parent="1"><mxGeometry x="455" y="1225" width="240" height="40" as="geometry" /></mxCell>
+
+    <!-- ACTORS -->
+    <mxCell id="ADM" value="Admin"      style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="75"  y="295"  width="40" height="60" as="geometry" /></mxCell>
+    <mxCell id="HR"  value="HR"         style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="75"  y="555"  width="40" height="60" as="geometry" /></mxCell>
+    <mxCell id="SUP" value="Supervisor" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1030" y="840" width="40" height="60" as="geometry" /></mxCell>
+    <mxCell id="EMP" value="Employee"   style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1030" y="1135" width="40" height="60" as="geometry" /></mxCell>
+
+    <!-- EDGES: Admin -->
+    <mxCell id="a1"  edge="1" source="ADM" target="UC1"  parent="1" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a2"  edge="1" source="ADM" target="UC2"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a3"  edge="1" source="ADM" target="UC3"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a4"  edge="1" source="ADM" target="UC4"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a5"  edge="1" source="ADM" target="UC5"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="a6"  edge="1" source="ADM" target="UC6"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- EDGES: HR -->
+    <mxCell id="h1"  edge="1" source="HR" target="UC1"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="h2"  edge="1" source="HR" target="UC2"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="h3"  edge="1" source="HR" target="UC3"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="h4"  edge="1" source="HR" target="UC7"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="h5"  edge="1" source="HR" target="UC8"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="h6"  edge="1" source="HR" target="UC9"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="h7"  edge="1" source="HR" target="UC10" parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- EDGES: Supervisor -->
+    <mxCell id="s1"  edge="1" source="SUP" target="UC1"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s2"  edge="1" source="SUP" target="UC2"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s3"  edge="1" source="SUP" target="UC3"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s4"  edge="1" source="SUP" target="UC9"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s5"  edge="1" source="SUP" target="UC10" parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s6"  edge="1" source="SUP" target="UC11" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s7"  edge="1" source="SUP" target="UC12" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s8"  edge="1" source="SUP" target="UC13" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s9"  edge="1" source="SUP" target="UC14" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s10" edge="1" source="SUP" target="UC15" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="s11" edge="1" source="SUP" target="UC16" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+    <!-- EDGES: Employee -->
+    <mxCell id="em1" edge="1" source="EMP" target="UC1"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="em2" edge="1" source="EMP" target="UC2"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="em3" edge="1" source="EMP" target="UC3"  parent="1" style="edgeStyle=none;html=1;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="em4" edge="1" source="EMP" target="UC17" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="em5" edge="1" source="EMP" target="UC18" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="em6" edge="1" source="EMP" target="UC19" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+    <mxCell id="em7" edge="1" source="EMP" target="UC20" parent="1" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+  </root>
+</mxGraphModel>

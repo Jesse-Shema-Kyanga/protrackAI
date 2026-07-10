@@ -269,6 +269,7 @@ const ActivityAnalytics = () => {
                                     <MenuItem value="all">Full Report</MenuItem>
                                     <MenuItem value="attendance">Attendance</MenuItem>
                                     <MenuItem value="productivity">Productivity</MenuItem>
+                                    <MenuItem value="violation">Violations (At-Risk)</MenuItem>
                                 </Select>
                             </FormControl>
                         )}
@@ -305,7 +306,7 @@ const ActivityAnalytics = () => {
                                     try {
                                         let urlParams = `period=${period}&reportType=${reportType}`;
                                         if (period === 'custom' && startDate && endDate) {
-                                            urlParams = `start=${startDate}&end=${endDate}&reportType=${reportType}`;
+                                            urlParams = `period=custom&start=${startDate}&end=${endDate}&reportType=${reportType}`;
                                         }
                                         const response = await axios.get(`/api/reports/team-pdf?${urlParams}`, {
                                             responseType: 'blob'
@@ -335,7 +336,7 @@ const ActivityAnalytics = () => {
                                 try {
                                     let urlParams = `userId=${selectedUserId}&period=${period}&reportType=${reportType}`;
                                     if (period === 'custom' && startDate && endDate) {
-                                        urlParams = `userId=${selectedUserId}&start=${startDate}&end=${endDate}&reportType=${reportType}`;
+                                        urlParams = `userId=${selectedUserId}&period=custom&start=${startDate}&end=${endDate}&reportType=${reportType}`;
                                     }
                                     const response = await axios.get(`/api/reports/pdf?${urlParams}`, {
                                         responseType: 'blob'
